@@ -2,94 +2,126 @@
 This is an experimental project implementing an agentic code assistant inspired by Deepagent-style architectures. 
 It features a central orchestrator agent that coordinates specialised subagents (explorers and coders) to tackle complex software tasks through strategic delegation, verification, and knowledge sharing.
 
-## How the System Works
+## How It Works
 
-![System architecture overview](readme_imgs/orch_agent_sys_arch.png)
+1. **User** submits a complex coding task
+2. **Orchestrator** analyzes and breaks it down
+3. **Orchestrator** launches **Explorer** to investigate the codebase
+4. **Explorer** reports findings to **Context Store**
+5. **Orchestrator** launches **Coder** with all necessary context
+6. **Coder** implements changes and reports back
+7. **Orchestrator** verifies and returns results to **User**
 
-The orchestrator acts as the brain of the operation - it receives the user's task but never touches code directly. Instead, it:
+**Key Innovation**: The **Context Store** enables agents to share knowledge, eliminating redundant work and building compound intelligence.
 
-1. **Analyses** the task and breaks it into focused subtasks
-2. **Dispatches** explorer agents to understand the system
-3. **Delegates** implementation work to coder agents with precise instructions
-4. **Verifies** all changes through additional explorer agents
-5. **Maintains** the context store with all discovered knowledge
+## System Architecture Overview
 
-The orchestrator's lack of direct code access forces proper delegation and verification patterns, leading to more strategic solutions.
+<img src="readme_imgs/architecture-diag.png" alt="System architecture overview" width="600"/>
 
-For a full breakdown of this project's code structure, see [here](./PROJECT_STRUCTURE.md)
 
-## 🤖 The Agents
+## Key Components
 
-While all agents use the same underlying LLM, each operates with its own context window, specialised system message, and distinct toolset. This creates functionally different agents optimised for their specific roles.
+### 👤 User
+- Submits high-level tasks to the system
+- Receives final results from the orchestrator
 
 ### 🎯 Orchestrator Agent
-[System message](src/system_msgs/md_files/orchestrator_sys_msg_v0.1.md)
-**Role:** Strategic coordinator and persistent intelligence layer  
-**Capabilities:** Task decomposition, context management, subagent delegation  
-**Tools:** Task creation, subagent launching, context store management  
-**Restrictions:** Cannot read or modify code directly - operates purely at architectural level  
+**The Strategic Brain**
+- **No direct code access** - Forces proper delegation
+- Analyzes tasks and creates strategic plans
+- Decomposes complex tasks into subtasks
+- Manages the Context Store (knowledge base)
+- Tracks all tasks via Task Store
+- Verifies work through explorer agents
 
-The orchestrator maintains the complete picture across all tasks, tracking discoveries and progress. It crafts precise task descriptions that explicitly specify what contexts subagents should return, ensuring focused and valuable information gathering.
-
-**Trust Calibration Strategy:**  
-The orchestrator employs adaptive delegation based on task complexity:
-- **Low Complexity Tasks**: Grants extremely high autonomy to the coder agent for simple modifications and bug fixes
-- **Medium/Large Tasks**: Maintains strong trust but uses iterative decomposition - breaking complex problems into atomic, verifiable steps
-- **Verification Philosophy**: Uses explorer agents liberally to verify progress, especially when tasks involve critical functionality
-
-
-### 🔍 Explorer Agent 
-[System message](src/system_msgs/md_files/explorer_sys_msg_v0.1.md) 
-**Role:** Read-only investigation and verification specialist  
-**Capabilities:** System exploration, code analysis, test execution, verification  
-**Tools:** File reading, search operations (grep/glob), bash commands, temporary script creation  
-**Restrictions:** Cannot modify existing files - strictly read-only operations  
-
-Explorers gather intelligence about the codebase, verify implementations, and discover system behaviors. They create knowledge artifacts that eliminate redundant exploration for future agents.
+### 🔍 Explorer Agent
+**Read-Only Investigation Specialist**
+- **Read-only access** to the codebase
+- Investigates system behavior
+- Verifies implementations
+- Runs tests and gathers information
+- Creates knowledge artifacts for the Context Store
 
 ### 💻 Coder Agent
-[System message](src/system_msgs/md_files/coder_sys_msg_v0.1.md)
-**Role:** Implementation specialist with write access  
-**Capabilities:** Code creation/modification, refactoring, bug fixes, system changes  
-**Tools:** Full file operations (read/write/edit), bash commands, search operations  
-**Restrictions:** None - full system access for implementation tasks  
+**Implementation Specialist**
+- **Full write access** to the codebase
+- Implements features and fixes bugs
+- Makes code modifications
+- Reports changes back with contexts
 
-Coders transform architectural vision into working code. They receive focused tasks with relevant contexts and implement solutions while maintaining code quality and conventions.
+### 💾 Context Store
+**Persistent Knowledge Base**
+- Stores discovered information
+- Enables knowledge sharing across agents
+- Eliminates redundant work
+- Builds compound intelligence
 
-## Key System Components
+### 📋 Task Store
+**Progress Tracker**
+- Tracks all subagent tasks
+- Maintains task status (pending/completed/failed)
+- Enables failure recovery
+- Provides audit trail
+
+## Data Flow
+<img src="readme_imgs/sequence-diagram.png" alt="Sequence diagram" width="600"/>
+
+## What Makes This System Special
 
 ### 🧠 Smart Context Sharing
+- **Knowledge Accumulation**: Every discovery becomes a permanent building block
+- **No Redundant Work**: Agents never rediscover the same information
+- **Focused Execution**: Each agent receives only the contexts it needs
 
-#### How Context Sharing Works
+### 🎯 Forced Delegation Pattern
+- Orchestrator's lack of code access forces proper task decomposition
+- Encourages strategic thinking over quick fixes
+- Creates clear separation of concerns
 
-I introduced a novel approach to multi-agent coordination through the **Context Store** - a persistent knowledge layer that transforms isolated agent actions into coherent problem-solving. Unlike traditional multi-agent systems where agents operate in isolation, my architecture enables sophisticated knowledge accumulation and sharing.
+### 🔄 Compound Intelligence
+- Multiple specialized agents working together
+- Each action builds meaningfully on previous discoveries
+- Exponential problem-solving capability through knowledge sharing
 
-**The Context Store Pattern:**
-1. **Orchestrator-Directed Discovery**: The orchestrator explicitly specifies what contexts it needs from each subagent, ensuring focused and relevant information gathering and implementation reporting
-2. **Knowledge Artifacts**: Subagents create discrete, reusable context items based on the orchestrator's requirements
-3. **Persistent Memory**: Contexts persist across agent interactions, building a comprehensive system understanding
-4. **Selective Injection**: The orchestrator precisely injects relevant contexts into new tasks, eliminating redundant discovery and providing all the information a subagent needs to complete it's respective task
-5. **Compound Intelligence**: Each action builds meaningfully on previous discoveries, creating exponential problem-solving capability
+### ✅ Built-in Verification
+- Explorer agents verify all implementations
+- Test execution and validation built into the workflow
+- Ensures quality through systematic checking
 
-**Key Benefits:**
-- **Eliminates Redundant Work**: Subagents never need to rediscover the same information twice
-- **Reduces Context Window Load**: Agents receive only the specific contexts they need
-- **Enables Complex Solutions**: Multi-step problems that no single agent could solve become tractable
-- **Maintains Focus**: Each subagent operates with a clean, focused context window
+## Typical Workflow Example
 
-This architecture ensures that every piece of discovered information becomes a permanent building block for future tasks, creating a system that genuinely learns and adapts throughout the problem-solving process.
+1. **User**: "Add authentication to the API"
 
-### 📋 Task Management
+2. **Orchestrator**:
+    - Analyzes the task
+    - Launches Explorer to find existing auth patterns
+    - Stores findings in Context Store
 
-The orchestrator maintains a comprehensive task management system that tracks all subagent activities:
+3. **Explorer Reports**:
+    - Found existing user model
+    - Located database configuration
+    - Identified auth library in use
 
-**Core Functions:**
-- **Progress Tracking**: Monitors task status (pending, completed, failed) across potentially hundreds of coordinated actions
-- **Failure Recovery**: Captures failure reasons to enable strategic adaptation and intelligent retries
-- **Workflow Orchestration**: Maintains clear audit trails of what's been attempted, preventing redundant work
-- **Strategic Planning**: Enables systematic decomposition of complex problems into verifiable subtasks
+4. **Orchestrator**:
+    - Launches Coder with all contexts
+    - Provides specific implementation instructions
 
-The task manager serves as the orchestrator's operational memory - while the context store holds discovered knowledge, the task manager tracks the journey of discovery itself. This dual-layer system ensures the orchestrator always knows both what it has learned AND how it learned it, enabling sophisticated multi-step solutions that build intelligently on previous attempts.
+5. **Coder Implements**:
+    - Adds auth middleware
+    - Updates routes
+    - Reports changes with contexts
+
+6. **Orchestrator**:
+    - Launches Explorer to verify
+    - Checks if tests pass
+    - Validates implementation
+
+7. **Explorer Verifies**:
+    - Tests run successfully
+    - Auth endpoints working
+    - Reports confirmation
+
+8. **Orchestrator**: Returns success to user
 
 ## Getting started
 
