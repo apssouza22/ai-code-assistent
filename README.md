@@ -1,4 +1,6 @@
-# Agentic Code assistant using Deepagent-style tool use for complex task solving 
+# Agentic Code assistant using Deepagent-style
+This is an experimental project implementing an agentic code assistant inspired by Deepagent-style architectures. 
+It features a central orchestrator agent that coordinates specialised subagents (explorers and coders) to tackle complex software tasks through strategic delegation, verification, and knowledge sharing.
 
 ## How the System Works
 
