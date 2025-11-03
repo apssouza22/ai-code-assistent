@@ -1,5 +1,5 @@
 [project]
-name = "multi-agent-coding-system"
+name = "agentic-code-assistant"
 version = "0.1.0"
 description = "A multi-agent AI coder. Agents collaborate to solve coding tasks."
 readme = "README.md"

@@ -96,6 +96,7 @@ The task manager serves as the orchestrator's operational memory - while the con
 For dev:
 ```bash
 uv sync
+uv pip install -e ".[dev]" 
 ```
 
-To quickly test various models: See [/tests](./tests/)
+To quickly test various models: See [/test](./test/)
