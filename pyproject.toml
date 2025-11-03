@@ -1,0 +1,41 @@
+[project]
+name = "multi-agent-coding-system"
+version = "0.1.0"
+description = "A multi-agent AI coder. Agents collaborate to solve coding tasks."
+readme = "README.md"
+requires-python = ">=3.12.9"
+dependencies = [
+    "terminal-bench",
+    "litellm>=1.72.6",
+    "pyyaml>=6.0.2",
+    "pydantic>=2.11.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-mock>=3.12.0",
+]
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "integration: Integration tests",
+    "unit: Unit tests",
+    "slow: Slow running tests",
+]
+
+[tool.uv.sources]
+multi-agent-coding-system = { workspace = true }
+terminal-bench = { git = "https://github.com/Danau5tin/terminal-bench-py311.git", branch = "main" }
