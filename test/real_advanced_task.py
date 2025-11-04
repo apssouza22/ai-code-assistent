@@ -25,11 +25,9 @@ def lead_architect_advanced_task(model: str, temperature=0.1):
     print(f"Temperature: {temperature}")
     print('=' * 120)
 
-    # Generate unique container name
     container_name = f"test_orchestrator_{uuid.uuid4().hex[:8]}"
 
     try:
-        # Start Docker container
         pretty_log.info(f"Starting Docker container: {container_name}")
         subprocess.run([
             'docker', 'run', '-d', '--rm',

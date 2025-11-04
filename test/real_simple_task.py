@@ -48,8 +48,12 @@ def lead_architect_simple_task(model: str, temperature=0.1):
         logging_dir = Path(this_dir_path) / "tracing_logs"
         try:
             orchestrator = create_orchestrator_agent(
-                api_key=os.getenv("LITE_LLM_API_KEY") or os.getenv("LITELLM_API_KEY"), temperature=temperature,
-                container_name=container_name, command_executor=executor, logging_dir=logging_dir)
+                api_key=os.getenv("LITE_LLM_API_KEY") or os.getenv("LITELLM_API_KEY"),
+                temperature=temperature,
+                container_name=container_name,
+                command_executor=executor,
+                logging_dir=logging_dir
+            )
         except Exception as e:
             import traceback
             traceback.print_exc()
