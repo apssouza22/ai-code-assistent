@@ -11,7 +11,7 @@ from pathlib import Path
 from src.core.agent import AgentTask
 from src.core.orchestrator.factory import create_orchestrator_agent
 from src.core.bash import DockerExecutor
-from src.misc import pretty_log
+from src.misc import pretty_log, PrettyLogger
 
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -81,7 +81,9 @@ Automatically choose to install any dependencies if it is required.
             pretty_log.debug(f"{orchestrator.session_history.to_dict()}")
 
         return result
-
+    except Exception as e:
+        pretty_log.error(f"Error during test: {e}")
+        raise
     finally:
         # Clean up Docker container
         try:
@@ -96,7 +98,7 @@ def main():
 
     # Test with different models if you want
     models_to_test = [
-        ("openai/gpt-5-mini-2025-08-07", 1),
+        ("openai/gpt-5-2025-08-07", 1),
         # ("openai/gpt-5-2025-08-07", 1),
         # ("anthropic/claude-sonnet-4-20250514", 0.1),
         # ("openrouter/qwen/qwen3-coder", 0.1),
@@ -110,7 +112,7 @@ def main():
         print("You may need to set one of these environment variables")
 
     # Test 1: Simple task
-    print("\n### TEST 1: Simple File Creation ###")
+    print("\n### TEST 1: Testing the creation of a server API ###")
     results = []
     for model, temp in models_to_test:
         try:
@@ -121,6 +123,6 @@ def main():
             results.append((model, "Test 1", "FAILED", str(e)))
 
 
+PrettyLogger.PRINT_DEBUG = True
 if __name__ == "__main__":
-    PRINT_DEBUG = True
     main()

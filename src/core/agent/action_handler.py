@@ -97,7 +97,7 @@ class ActionHandler:
         if parsing_errors:
             has_error = True
             for error in parsing_errors:
-                pretty_log.error(f"Parse error: {error}")
+                pretty_log.debug(f"Parse error: {error}")
                 env_responses.append(f"[PARSE ERROR] {error} \n USE BLOCK SCALARS (|) TO FIX MULTILINE STRINGS ISSUES!")
 
         pretty_log.info(f"Executing actions: {[type(a).__name__ for a in actions]}", self.agent_name.upper())

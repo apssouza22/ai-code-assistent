@@ -3,8 +3,6 @@
 from datetime import datetime
 from typing import Optional
 
-PRINT_DEBUG = False
-
 class Colors:
     """ANSI color codes for terminal output."""
     # Basic colors
@@ -37,6 +35,8 @@ class Colors:
 class PrettyLogger:
     """Pretty terminal logger with colored output."""
 
+    PRINT_DEBUG = False
+
     @staticmethod
     def _get_timestamp() -> str:
         """Get formatted timestamp."""
@@ -68,7 +68,7 @@ class PrettyLogger:
             message: The response message
             agent_name: Optional agent name to include
         """
-        if not PRINT_DEBUG:
+        if not PrettyLogger.PRINT_DEBUG:
             return
         timestamp = PrettyLogger._get_timestamp()
         if agent_name:
