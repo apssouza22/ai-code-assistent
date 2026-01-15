@@ -1,8 +1,13 @@
 # Agentic Code assistant using Deepagent-style
+
 This is an experimental project implementing an agentic code assistant inspired by Deepagent-style architectures.
-Deep Agents are an advanced agent architecture designed for handling complex, multi-step tasks that require sustained reasoning, tool use, and memory. 
-Unlike traditional agents that operate in short loops or perform simple tool calls, Deep Agents plan their actions, manage evolving context, delegate subtasks to specialized sub-agents, and maintain state across long interactions. This architecture is already powering real-world applications like Claude Code, Deep Research, and Manus.
-It features a central orchestrator agent that coordinates specialised subagents (explorers and coders) to tackle complex software tasks through strategic delegation, verification, and knowledge sharing.
+Deep Agents are an advanced agent architecture designed for handling complex, multi-step tasks that require sustained
+reasoning, tool use, and memory.
+Unlike traditional agents that operate in short loops or perform simple tool calls, Deep Agents plan their actions,
+manage evolving context, delegate subtasks to specialized sub-agents, and maintain state across long interactions. This
+architecture is already powering real-world applications like Claude Code, Deep Research, and Manus.
+It features a central orchestrator agent that coordinates specialised subagents (explorers and coders) to tackle complex
+software tasks through strategic delegation, verification, and knowledge sharing.
 
 ## How It Works
 
@@ -14,21 +19,24 @@ It features a central orchestrator agent that coordinates specialised subagents 
 6. **Coder** implements changes and reports back
 7. **Orchestrator** verifies and returns results to **User** or requests further exploration/coding as needed
 
-**Key Innovation**: The **Context Store** enables agents to share knowledge, eliminating redundant work and building compound intelligence.
+**Key Innovation**: The **Context Store** enables agents to share knowledge, eliminating redundant work and building
+compound intelligence.
 
 ## System Architecture Overview
 
 <img src="readme_imgs/architecture-diag.png" alt="System architecture overview" width="600"/>
 
-
 ## Key Components
 
 ### 👤 User
+
 - Submits high-level tasks to the system
 - Receives final results from the orchestrator
 
 ### 🎯 Orchestrator Agent
+
 **The Strategic Brain**
+
 - **No direct code access** - Forces proper delegation
 - Analyzes tasks and creates strategic plans
 - Decomposes complex tasks into subtasks
@@ -37,7 +45,9 @@ It features a central orchestrator agent that coordinates specialised subagents 
 - Verifies work through explorer agents
 
 ### 🔍 Explorer Agent
+
 **Read-Only Investigation Specialist**
+
 - **Read-only access** to the codebase
 - Investigates system behavior
 - Verifies implementations
@@ -45,47 +55,58 @@ It features a central orchestrator agent that coordinates specialised subagents 
 - Creates knowledge artifacts for the Context Store
 
 ### 💻 Coder Agent
+
 **Implementation Specialist**
+
 - **Full write access** to the codebase
 - Implements features and fixes bugs
 - Makes code modifications
 - Reports changes back with contexts
 
 ### 💾 Context Store
+
 **Persistent Knowledge Base**
+
 - Stores discovered information
 - Enables knowledge sharing across agents
 - Eliminates redundant work
 - Builds compound intelligence
 
 ### 📋 Task Store
+
 **Progress Tracker**
+
 - Tracks all subagent tasks
 - Maintains task status (pending/completed/failed)
 - Enables failure recovery
 - Provides audit trail
 
 ## Data Flow
+
 <img src="readme_imgs/sequence-diagram.png" alt="Sequence diagram" width="600"/>
 
 ## What Makes This System Special
 
 ### 🧠 Smart Context Sharing
+
 - **Knowledge Accumulation**: Every discovery becomes a permanent building block
 - **No Redundant Work**: Agents never rediscover the same information
 - **Focused Execution**: Each agent receives only the contexts it needs
 
 ### 🎯 Forced Delegation Pattern
+
 - Orchestrator's lack of code access forces proper task decomposition
 - Encourages strategic thinking over quick fixes
 - Creates clear separation of concerns
 
 ### 🔄 Compound Intelligence
+
 - Multiple specialized agents working together
 - Each action builds meaningfully on previous discoveries
 - Exponential problem-solving capability through knowledge sharing
 
 ### ✅ Built-in Verification
+
 - Explorer agents verify all implementations
 - Test execution and validation built into the workflow
 - Ensures quality through systematic checking
@@ -130,6 +151,7 @@ It features a central orchestrator agent that coordinates specialised subagents 
 Ensure you set the `LITE_LLM_API_KEY` environment variable. The default model is `openai/gpt-5`.
 
 For dev:
+
 ```bash
 uv venv
 source .venv/bin/activate
