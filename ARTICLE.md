@@ -1,7 +1,5 @@
 # A Deep Dive into Deep Agent Architecture for AI Coding Assistants
 
-## Introduction: The Problem with Shallow-Agent Systems
-
 Traditional AI agents operate with a fundamental limitation: they're single agents trying to handle everything at once.
 While they can be impressively capable for straightforward tasks, they struggle when faced with complex, multi-step
 challenges that require sustained reasoning, strategic planning, and coordinated execution.
@@ -427,40 +425,7 @@ Common failure modes become impossible:
 
 #### Impact on System Behavior
 
-In practice, this constraint produces notably more systematic implementations:
-
-```mermaid
-flowchart TB
-    subgraph Traditional["Without Forced Delegation (Single Agent)"]
-        T1[User: Add auth to API] --> T2[Agent reads some files]
-        T2 --> T3[Agent writes auth middleware<br/>⚠️ May miss existing patterns]
-        T3 --> T4[Agent writes tests<br/>⚠️ May be incomplete]
-        T4 --> T5[Done!<br/>⚠️ Uncertain quality]
-    end
-    
-    subgraph Forced["With Forced Delegation (Multi Agent)"]
-        F1[User: Add auth to API] --> F2[Orchestrator: Cannot access code<br/>Must delegate]
-        F2 --> F3[Explorer: Thorough investigation<br/>✓ Discovers all auth code]
-        F3 --> F4[Reports contexts]
-        F4 --> F5[Orchestrator: Analyzes findings<br/>✓ Creates implementation plan]
-        F5 --> F6[Coder: Implements using contexts<br/>✓ Follows discovered patterns]
-        F6 --> F7[Reports implementation contexts]
-        F7 --> F8[Orchestrator: Must verify]
-        F8 --> F9[Explorer: Runs full test suite<br/>✓ Validates implementation]
-        F9 --> F10[Done!<br/>✓ High confidence]
-    end
-    
-    style T3 fill:#ffebee
-    style T4 fill:#ffebee
-    style T5 fill:#ffebee
-    style F3 fill:#e8f5e9
-    style F5 fill:#e8f5e9
-    style F6 fill:#e8f5e9
-    style F9 fill:#e8f5e9
-    style F10 fill:#e8f5e9
-```
-
-The forced delegation version is more verbose, but produces more thorough, better-verified implementations.
+In practice, this constraint produces notably more systematic implementations. The forced delegation version is more verbose, but produces more thorough, better-verified implementations.
 
 ### Stateless Turn-Based Execution
 
