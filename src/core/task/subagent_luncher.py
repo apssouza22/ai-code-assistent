@@ -88,6 +88,7 @@ class AgentLauncher:
             context = self.context_store.get_context(ref)
             if context:
                 contexts[ref] = context.content
+                pretty_log.debug(f"Included context {ref} in subagent task", "ORCHESTRATOR")
             else:
                 logger.warning(f"Context {ref} not found")
         return contexts

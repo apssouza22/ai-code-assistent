@@ -59,7 +59,7 @@ class SessionHistory:
 
         lines = ["Context Store:"]
         for context_id, context in self.context_store.get_all_contexts():
-            lines.append(f"  Id: [{context_id}]")
-            lines.append(f"  Content: {context.content}")
+            lines.append(f"  Id: {context_id}")
             lines.append(f"  Reported by: {context.reported_by}")
+            lines.append(f"  Content: {context.content}")
         return "\n".join(lines)
