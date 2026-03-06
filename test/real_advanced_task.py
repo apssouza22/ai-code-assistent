@@ -17,14 +17,8 @@ from src.misc import pretty_log, PrettyLogger
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
-def lead_architect_advanced_task(model: str, temperature=0.1):
+def lead_architect_advanced_task():
     """Test orchestrator with a simple task."""
-
-    print(f"\n{'=' * 120}")
-    print(f"Testing with model: {model}")
-    print(f"Temperature: {temperature}")
-    print('=' * 120)
-
     container_name = f"test_orchestrator_{uuid.uuid4().hex[:8]}"
 
     try:
@@ -46,8 +40,11 @@ def lead_architect_advanced_task(model: str, temperature=0.1):
         logging_dir = Path(this_dir_path) / "tracing_logs"
         try:
             orchestrator = create_orchestrator_agent(
-                api_key=os.getenv("LITE_LLM_API_KEY") or os.getenv("LITELLM_API_KEY"), temperature=temperature,
-                container_name=container_name, command_executor=executor, logging_dir=logging_dir)
+                api_key=os.getenv("LITE_LLM_API_KEY") or os.getenv("LITELLM_API_KEY"),
+                container_name=container_name,
+                command_executor=executor,
+                logging_dir=logging_dir
+            )
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -96,16 +93,6 @@ Automatically choose to install any dependencies if it is required.
 def main():
     """Main test runner."""
 
-    # Test with different models if you want
-    models_to_test = [
-        ("openai/gpt-5-2025-08-07", 1),
-        # ("openai/gpt-5-2025-08-07", 1),
-        # ("anthropic/claude-sonnet-4-20250514", 0.1),
-        # ("openrouter/qwen/qwen3-coder", 0.1),
-        # ("openrouter/z-ai/glm-4.5", 0.1),
-        # ("openrouter/deepseek/deepseek-chat-v3.1", 0.1),
-    ]
-
     # Check for environment variables
     if not os.getenv("LITE_LLM_API_KEY") and not os.getenv("LITELLM_API_KEY"):
         print("Warning: No API key found in LITE_LLM_API_KEY or LITELLM_API_KEY")
@@ -114,13 +101,11 @@ def main():
     # Test 1: Simple task
     print("\n### TEST 1: Testing the creation of a server API ###")
     results = []
-    for model, temp in models_to_test:
-        try:
-            result = lead_architect_advanced_task(model=model, temperature=temp)
-            results.append((model, "Test 1", "SUCCESS", result))
-        except Exception as e:
-            print(f"\n✗ Error with model {model}: {e}")
-            results.append((model, "Test 1", "FAILED", str(e)))
+    try:
+        result = lead_architect_advanced_task()
+        results.append(("Test 1", "SUCCESS", result))
+    except Exception as e:
+        results.append(("Test 1", "FAILED", str(e)))
 
 
 PrettyLogger.PRINT_DEBUG = True

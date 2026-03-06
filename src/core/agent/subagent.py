@@ -9,6 +9,7 @@ from src.core.action import ReportAction
 from src.core.agent.agent import AgentTask, Agent
 from src.core.agent.subagent_report import ContextItem, SubagentMeta, SubagentReport
 from src.core.llm import get_llm_response
+from src.core.llm.llm_config import LlmConfig
 from src.misc import pretty_log
 
 logger = logging.getLogger(__name__)
@@ -33,10 +34,8 @@ class Subagent(Agent):
         agent_name: str,
         system_prompt: str,
         actions: Dict[type, Callable],
+        llm_config: LlmConfig,
         max_turns: int = 30,
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        api_key: Optional[str] = None,
         api_base: Optional[str] = None,
         logging_dir: Optional[Path] = None
     ):
@@ -45,9 +44,7 @@ class Subagent(Agent):
             system_prompt=system_prompt,
             actions=actions,
             max_turns=max_turns,
-            model=model,
-            temperature=temperature,
-            api_key=api_key,
+            llm_config=llm_config,
             api_base=api_base,
             logging_dir=logging_dir,
             agent_name=agent_name
@@ -79,10 +76,7 @@ class Subagent(Agent):
         """Get response from LLM using centralized client."""
         return get_llm_response(
             messages=messages,
-            model=self.model,
-            temperature=self.temperature,
-            max_tokens=4096,
-            api_key=self.api_key,
+            llm_config=self.llm_config,
             api_base=self.api_base
         )
 

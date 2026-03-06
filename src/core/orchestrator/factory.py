@@ -12,6 +12,7 @@ from src.core.bash.search_handlers import LSActionHandler, GlobActionHandler, Gr
 from src.core.context import ContextStore
 from src.core.context.context_handler import AddContextActionHandler
 from src.core.file.file_handlers import ReadActionHandler, WriteActionHandler, EditActionHandler, MultiEditActionHandler, FileMetadataActionHandler, WriteTempScriptActionHandler
+from src.core.llm import LlmConfig
 from src.core.notepad import AddNoteActionHandler, ViewAllNotesActionHandler
 from src.core.notepad.notepad_manager import ScratchpadManager
 from src.core.orchestrator.orchestrator_agent import OrchestratorAgent
@@ -23,16 +24,13 @@ from src.core.todo.todo_handler import BatchTodoActionHandler
 from src.core.todo.todo_manager import TodoManager
 from src.system_msgs.system_msg_loader import load_explorer_system_message, load_coder_system_message, \
   load_orchestrator_system_message
-
-orchestrator_model = "openai/gpt-5-2025-08-07"
-subagent_model = "openai/gpt-5-mini-2025-08-07"
+ORCHESTRATOR_MODEL = "openai/gpt-4.1-2025-04-14"
+SUBAGENT_MODEL = "openai/gpt-5-mini-2025-08-07"
 
 
 def create_orchestrator_agent(
     api_key: str,
-    temperature: float,
     container_name: str,
-    model: Optional[str] = None,
     command_executor: Optional[CommandExecutor] = None,
     logging_dir: Optional[Path] = None,
 ) -> OrchestratorAgent:
@@ -40,6 +38,9 @@ def create_orchestrator_agent(
 
   if command_executor is None:
     command_executor = DockerExecutor(container_name)
+
+  subagent_llm_config = LlmConfig(model=SUBAGENT_MODEL, temperature=1, api_key=api_key)
+  orchestrator_llm_config = LlmConfig(model=ORCHESTRATOR_MODEL, temperature=1, api_key=api_key)
 
   task_store = TaskStore()
   todo_manager = TodoManager()
@@ -54,10 +55,7 @@ def create_orchestrator_agent(
       system_prompt=load_explorer_system_message(),
       actions=actions,
       agent_name="explorer",
-      model=model or subagent_model,
-      temperature=temperature,
-      api_key=api_key,
-      api_base=None,
+      llm_config=subagent_llm_config,
       logging_dir=logging_dir,
   )
 
@@ -65,10 +63,7 @@ def create_orchestrator_agent(
       system_prompt=load_coder_system_message(),
       actions=actions,
       agent_name="coder",
-      model=model or subagent_model,
-      temperature=temperature,
-      api_key=api_key,
-      api_base=None,
+      llm_config=subagent_llm_config,
       logging_dir=logging_dir,
   )
 
@@ -97,8 +92,7 @@ def create_orchestrator_agent(
       task_manager=task_manager,
       task_store=task_store,
       context_store=context_store,
-      model=model or orchestrator_model,
-      temperature=temperature,
+      llm_config=orchestrator_llm_config,
       logging_dir=logging_dir,
   )
 

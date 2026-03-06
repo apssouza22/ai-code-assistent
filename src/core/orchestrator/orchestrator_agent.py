@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional, Callable
 
 from src.core.agent import ExecutionResult, Agent, AgentTask
 from src.core.context import ContextStore
-from src.core.llm import get_llm_response
+from src.core.llm import get_llm_response, LlmConfig
 from src.core.orchestrator.session_history import SessionHistory
 from src.core.orchestrator.turn import Turn
 from src.core.orchestrator.turn_history import TurnHistory
@@ -27,22 +27,17 @@ class OrchestratorAgent(Agent):
       context_store: ContextStore,
       task_manager: TaskManager,
       actions: Dict[type, Callable],
-      model: Optional[str] = None,
-      temperature: Optional[float] = None,
-      api_key: Optional[str] = None,
+      llm_config: LlmConfig,
       logging_dir: Optional[Path] = None,
   ):
     super().__init__(
         system_prompt=system_prompt,
         actions=actions,
         agent_name="orchestrator",
-        model=model,
-        temperature=temperature,
-        api_key=api_key,
-        api_base=None,
+        llm_config=llm_config,
         logging_dir=logging_dir,
     )
-    logger.info(f"OrchestratorAgent initialized with model={model}, temperature={temperature}")
+    logger.info(f"OrchestratorAgent initialized with model={llm_config.model}, temperature={llm_config.temperature}")
     self.task_manager = task_manager
     self.task_store = task_store
     self.context_store = context_store
@@ -116,10 +111,7 @@ class OrchestratorAgent(Agent):
           {"role": "system", "content": self.system_message},
           {"role": "user", "content": user_message}
         ],
-        model=self.model,
-        temperature=self.temperature,
-        max_tokens=4096,
-        api_key=self.api_key,
+        llm_config=self.llm_config,
         api_base=self.api_base
     )
 

@@ -2,8 +2,9 @@
 LLM module - Public API for LLM client operations.
 
 This module provides a clean boundary for the LLM subsystem by exposing
-only the functions needed by external modules.
+only the classes and functions needed by external modules.
 """
+from src.core.llm.llm_config import LlmConfig
 from src.core.llm.llm_client import (
     get_llm_response,
     count_input_tokens,
@@ -12,6 +13,7 @@ from src.core.llm.llm_client import (
 )
 
 __all__ = [
+    "LlmConfig",
     "get_llm_response",
     "count_input_tokens",
     "count_output_tokens",

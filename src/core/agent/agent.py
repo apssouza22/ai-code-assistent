@@ -6,6 +6,7 @@ from typing import Dict, Any, Callable, Optional, List
 from src.core.agent.action_handler import ActionHandler
 from src.core.agent.actions_result import ExecutionResult
 from src.core.llm import count_input_tokens, count_output_tokens
+from src.core.llm.llm_config import LlmConfig
 from src.misc import TurnLogger
 
 
@@ -29,18 +30,14 @@ class Agent:
         system_prompt: str,
         actions: Dict[type, Callable],
         agent_name: str,
+        llm_config: LlmConfig,
         max_turns: int = 30,
-        model: Optional[str] = None,
-        temperature: Optional[float] = None,
-        api_key: Optional[str] = None,
         api_base: Optional[str] = None,
         logging_dir: Optional[Path] = None,
     ):
         self.agent_name = agent_name
         self.max_turns = max_turns
-        self.model = model
-        self.temperature = temperature
-        self.api_key = api_key
+        self.llm_config = llm_config
         self.api_base = api_base
         self.action_handler = ActionHandler(actions=actions, agent_name=agent_name)
         self.messages: List[Dict[str, str]] = []
@@ -53,12 +50,12 @@ class Agent:
     @property
     def total_input_tokens(self) -> int:
         """Calculate total input tokens from all messages."""
-        return count_input_tokens(self.messages, self.model)
+        return count_input_tokens(self.messages, self.llm_config.model)
 
     @property
     def total_output_tokens(self) -> int:
         """Calculate total output tokens from all messages."""
-        return count_output_tokens(self.messages, self.model)
+        return count_output_tokens(self.messages, self.llm_config.model)
 
     @abstractmethod
     def run_task(self, task: AgentTask, max_turns: Optional[int] = None) -> Dict[str, Any]:

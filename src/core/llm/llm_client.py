@@ -12,6 +12,7 @@ import litellm
 from litellm.exceptions import InternalServerError
 from litellm.utils import token_counter
 
+from src.core.llm.llm_config import LlmConfig
 from src.misc import pretty_log
 
 
@@ -100,62 +101,53 @@ def _apply_anthropic_caching_if_possible(messages: List[Dict[str, Any]], model: 
 
 def get_llm_response(
     messages: List[Dict[str, Any]],
-    model: Optional[str] = None,
-    temperature: Optional[float] = None,
-    max_tokens: int = 4096,
-    api_key: Optional[str] = None,
+    llm_config: LlmConfig,
     api_base: Optional[str] = None,
     max_retries: int = 10
 ) -> str:
     start = time.time()
-    model = model or os.getenv("LITELLM_MODEL", None)
-    if not model:
-        raise ValueError("Model must be specified either as argument or via LITELLM_MODEL env var.")
-    temperature = temperature if temperature is not None else float(os.getenv("LITELLM_TEMPERATURE", "0.7"))
+    model = llm_config.model
+    temperature = llm_config.temperature
+    max_tokens = llm_config.max_tokens
 
-    if api_key or (api_key := os.getenv("LITE_LLM_API_KEY")):
-        litellm.api_key = api_key
+    if llm_config.api_key or (api_key := os.getenv("LITE_LLM_API_KEY")):
+        litellm.api_key = llm_config.api_key or api_key
     if api_base or (api_base := os.getenv("LITE_LLM_API_BASE")):
         litellm.api_base = api_base
 
     processed_messages = _apply_anthropic_caching_if_possible(messages, model)
 
-    # Retry logic with exponential backoff
     for attempt in range(max_retries):
         try:
+            is_reasoning_model = "gpt-5" in model
+            token_params = {"max_completion_tokens": max_tokens} if is_reasoning_model else {"max_tokens": max_tokens}
             response = litellm.completion(
                 model=model,
                 messages=processed_messages,
                 temperature=temperature,
-                max_tokens=max_tokens,
-                reasoning_effort="low"
+                reasoning_effort="low" if is_reasoning_model else None,
+                **token_params
             )
-            pretty_log.debug(f"OpenAI call took {time.time()-start:.2f}s")
+            pretty_log.debug(f"OpenAI call took {time.time()-start:.2f}s with model {model} (attempt {attempt + 1})")
             return response.choices[0].message.content # type: ignore
 
         except InternalServerError as e:
-            # Check if it's an Anthropic overloaded error
             if "overloaded_error" in str(e):
                 if attempt < max_retries - 1:
-                    # Exponential backoff with jitter
-                    base_delay = 2 ** attempt  # 1, 2, 4, 8, 16, 32, 64
-                    jitter = random.uniform(0, base_delay * 0.1)  # Add up to 10% jitter
-                    delay = min(base_delay + jitter, 60)  # Cap at 60 seconds
+                    base_delay = 2 ** attempt
+                    jitter = random.uniform(0, base_delay * 0.1)
+                    delay = min(base_delay + jitter, 60)
 
                     pretty_log.warning(f"Anthropic overloaded, retrying in {delay:.2f} seconds (attempt {attempt + 1}/{max_retries})")
                     time.sleep(delay)
                 else:
-                    # Max retries reached, re-raise the exception
                     raise
             else:
-                # Not an overloaded error, re-raise immediately
                 raise
 
         except Exception:
-            # Any other exception, re-raise immediately
             raise
 
-    # Should never reach here, but just in case
     raise RuntimeError("Failed to get LLM response after maximum retries.")
 
 

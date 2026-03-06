@@ -13,6 +13,7 @@ from src.core.bash.bash_handler import BashActionHandler
 from src.core.action.handlers.report_handler import ReportActionHandler
 from src.core.agent import Subagent, SubagentTask
 from src.core.bash import DockerExecutor
+from src.core.llm import LlmConfig
 
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -85,13 +86,11 @@ def test_subagent_file_creation(model: str, temperature=0.1):
             bootstrap_ctx=[],
         )
 
-        # Create subagent with specified model
         subagent = Subagent(
             agent_name="coder",
             actions=actions,
             max_turns=10,
-            model=model,
-            temperature=temperature,
+            llm_config=LlmConfig(model=model, temperature=temperature),
         )
 
         # Run the task

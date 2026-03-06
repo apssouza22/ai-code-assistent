@@ -57,8 +57,6 @@ class AgentSetup(BaseAgent):
 
         docker_executor = DockerExecutor(container_name=container_name)
         self.orchestrator = create_orchestrator_agent(
-            model=self.model,
-            temperature=self.temperature,
             container_name=container_name,
             command_executor=docker_executor,
             api_key=os.getenv("LITE_LLM_API_KEY") or os.getenv("LITELLM_API_KEY"),
@@ -84,8 +82,8 @@ class AgentSetup(BaseAgent):
                             subagent_output_tokens += trajectory_data.get('total_output_tokens', 0)
                             logger.info(f"Subagent {task_id} tokens - Input: {trajectory_data.get('total_input_tokens', 0)}, Output: {trajectory_data.get('total_output_tokens', 0)}")
 
-            orchestrator_input_tokens = count_input_tokens(self.orchestrator.messages, self.model)
-            orchestrator_output_tokens = count_output_tokens(self.orchestrator.messages, self.model)
+            orchestrator_input_tokens = count_input_tokens(self.orchestrator.messages, self.orchestrator.llm_config.model)
+            orchestrator_output_tokens = count_output_tokens(self.orchestrator.messages, self.orchestrator.llm_config.model)
             total_input_tokens = subagent_input_tokens + orchestrator_input_tokens
             total_output_tokens = subagent_output_tokens + orchestrator_output_tokens
             failure_mode = self._get_failure_mode(result)
