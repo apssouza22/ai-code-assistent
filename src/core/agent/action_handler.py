@@ -6,7 +6,7 @@ from typing import Tuple, Dict, Callable, Optional, List
 from src.core.action import (
     FinishAction, Action, SimpleActionParser
 )
-from src.core.action.middleware import ActionMiddleware, ActionPipeline
+from src.core.middleware import Middleware, MiddlewarePipeline
 from src.core.common.utils import format_tool_output
 from src.core.agent.actions_result import ExecutionResult
 from src.misc import pretty_log
@@ -21,11 +21,11 @@ class ActionHandler:
         self,
         actions: Dict[type, Callable],
         agent_name: str,
-        action_middlewares: Optional[List[ActionMiddleware]] = None,
+        middlewares: Optional[List[Middleware]] = None,
     ):
         self.agent_name = agent_name
         self._actions = actions
-        self._pipeline = ActionPipeline(action_middlewares)
+        self._pipeline = MiddlewarePipeline(middlewares)
 
     def execute(self, llm_output: str) -> ExecutionResult:
         """Execute actions from LLM output and return result.
@@ -55,11 +55,11 @@ class ActionHandler:
         done = False
         has_error = False
 
-        wrapped_handler = self._pipeline.wrap(self._raw_handle_action)
-
         for action in actions:
             try:
-                output, action_error = wrapped_handler(action)
+                output, action_error = self._pipeline.execute_action(
+                    action, self._raw_handle_action, self.agent_name
+                )
                 actions_executed.append(action)
                 env_responses.append(output)
                 has_error = has_error or action_error

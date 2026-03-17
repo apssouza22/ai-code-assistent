@@ -3,10 +3,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Any, Callable, Optional, List
 
-from src.core.action.middleware import ActionMiddleware
+from src.core.middleware import Middleware, MiddlewarePipeline
 from src.core.agent.action_handler import ActionHandler
 from src.core.agent.actions_result import ExecutionResult
-from src.core.agent.turn_middleware import TurnMiddleware, TurnPipeline
 from src.core.llm import count_input_tokens, count_output_tokens
 from src.core.llm.llm_config import LlmConfig
 from src.misc import TurnLogger
@@ -36,8 +35,7 @@ class Agent:
         max_turns: int = 30,
         api_base: Optional[str] = None,
         logging_dir: Optional[Path] = None,
-        turn_middlewares: Optional[List[TurnMiddleware]] = None,
-        action_middlewares: Optional[List[ActionMiddleware]] = None,
+        middlewares: Optional[List[Middleware]] = None,
     ):
         self.agent_name = agent_name
         self.max_turns = max_turns
@@ -46,12 +44,12 @@ class Agent:
         self.action_handler = ActionHandler(
             actions=actions,
             agent_name=agent_name,
-            action_middlewares=action_middlewares,
+            middlewares=middlewares,
         )
         self.messages: List[Dict[str, str]] = []
         self.system_message = system_prompt
         self.turn_logger = TurnLogger(logging_dir, agent_name) if logging_dir else None
-        self.turn_pipeline = TurnPipeline(turn_middlewares or [])
+        self.pipeline = MiddlewarePipeline(middlewares)
 
         self.messages = []
 
@@ -74,4 +72,3 @@ class Agent:
     def handle_llm_response(self, llm_response: str) -> ExecutionResult:
         """Execute actions based on LLM response."""
         return self.action_handler.execute(llm_response)
-

@@ -5,13 +5,11 @@ from src.core.action import TaskCreateAction
 from src.core.action.actions import LaunchSubagentAction, BatchTodoAction, AddNoteAction, ViewAllNotesAction, FinishAction, ReportAction, BashAction, GrepAction, GlobAction, LSAction, ReadAction, \
   WriteAction, WriteTempScriptAction, AddContextAction, MultiEditAction, FileMetadataAction, EditAction
 from src.core.action.handlers import FinishActionHandler, ReportActionHandler
-from src.core.action.middleware import (
+from src.core.middleware import (
     AuditLogMiddleware, OutputTruncationMiddleware, PermissionMiddleware, TimingMiddleware,
-)
-from src.core.agent import AgentManager, Subagent
-from src.core.agent.turn_middleware import (
     TurnLoggingMiddleware, TokenBudgetMiddleware, ErrorRecoveryMiddleware,
 )
+from src.core.agent import AgentManager, Subagent
 from src.core.bash import CommandExecutor, DockerExecutor, FileManager, SearchManager
 from src.core.bash.bash_handler import BashActionHandler
 from src.core.bash.search_handlers import LSActionHandler, GlobActionHandler, GrepActionHandler
@@ -78,20 +76,20 @@ def create_orchestrator_agent(
 
   actions = get_sub_agent_actions(command_executor, context_store, file_manager, scratchpad_manager, search_manager, todo_manager)
 
-  subagent_turn_middlewares = [
+  explorer_middlewares = [
       TurnLoggingMiddleware(),
       ErrorRecoveryMiddleware(),
       TokenBudgetMiddleware(max_tokens=SUBAGENT_TOKEN_BUDGET, model=SUBAGENT_MODEL),
-  ]
-
-  explorer_action_middlewares = [
       AuditLogMiddleware(agent_name="explorer"),
       TimingMiddleware(),
       PermissionMiddleware(allowed_actions=EXPLORER_ALLOWED_ACTIONS, agent_name="explorer"),
       OutputTruncationMiddleware(max_chars=ACTION_OUTPUT_MAX_CHARS),
   ]
 
-  coder_action_middlewares = [
+  coder_middlewares = [
+      TurnLoggingMiddleware(),
+      ErrorRecoveryMiddleware(),
+      TokenBudgetMiddleware(max_tokens=SUBAGENT_TOKEN_BUDGET, model=SUBAGENT_MODEL),
       AuditLogMiddleware(agent_name="coder"),
       TimingMiddleware(),
       PermissionMiddleware(allowed_actions=CODER_ALLOWED_ACTIONS, agent_name="coder"),
@@ -104,8 +102,7 @@ def create_orchestrator_agent(
       agent_name="explorer",
       llm_config=subagent_llm_config,
       logging_dir=logging_dir,
-      turn_middlewares=subagent_turn_middlewares,
-      action_middlewares=explorer_action_middlewares,
+      middlewares=explorer_middlewares,
   )
 
   coder_agent = Subagent(
@@ -114,8 +111,7 @@ def create_orchestrator_agent(
       agent_name="coder",
       llm_config=subagent_llm_config,
       logging_dir=logging_dir,
-      turn_middlewares=subagent_turn_middlewares,
-      action_middlewares=coder_action_middlewares,
+      middlewares=coder_middlewares,
   )
 
   agent_manager = AgentManager(
@@ -137,13 +133,10 @@ def create_orchestrator_agent(
   lunch_subagent_action_handler = LaunchSubagentActionHandler(agent_launcher)
   orchestrator_action_handlers = {**actions, TaskCreateAction: create_task_action_handler.handle, LaunchSubagentAction: lunch_subagent_action_handler.handle}
 
-  orchestrator_turn_middlewares = [
+  orchestrator_middlewares = [
       TurnLoggingMiddleware(),
       ErrorRecoveryMiddleware(),
       TokenBudgetMiddleware(max_tokens=ORCHESTRATOR_TOKEN_BUDGET, model=ORCHESTRATOR_MODEL),
-  ]
-
-  orchestrator_action_middlewares = [
       AuditLogMiddleware(agent_name="orchestrator"),
       TimingMiddleware(),
       OutputTruncationMiddleware(max_chars=ACTION_OUTPUT_MAX_CHARS),
@@ -157,8 +150,7 @@ def create_orchestrator_agent(
       context_store=context_store,
       llm_config=orchestrator_llm_config,
       logging_dir=logging_dir,
-      turn_middlewares=orchestrator_turn_middlewares,
-      action_middlewares=orchestrator_action_middlewares,
+      middlewares=orchestrator_middlewares,
   )
 
 

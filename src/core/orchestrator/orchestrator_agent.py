@@ -4,9 +4,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Callable
 
-from src.core.action.middleware import ActionMiddleware
+from src.core.middleware import Middleware, TurnContext
 from src.core.agent import Agent, AgentTask
-from src.core.agent.turn_middleware import TurnContext, TurnMiddleware
 from src.core.context import ContextStore
 from src.core.llm import get_llm_response, LlmConfig
 from src.core.orchestrator.session_history import SessionHistory
@@ -31,8 +30,7 @@ class OrchestratorAgent(Agent):
       actions: Dict[type, Callable],
       llm_config: LlmConfig,
       logging_dir: Optional[Path] = None,
-      turn_middlewares: Optional[List[TurnMiddleware]] = None,
-      action_middlewares: Optional[List[ActionMiddleware]] = None,
+      middlewares: Optional[List[Middleware]] = None,
   ):
     super().__init__(
         system_prompt=system_prompt,
@@ -40,8 +38,7 @@ class OrchestratorAgent(Agent):
         agent_name="orchestrator",
         llm_config=llm_config,
         logging_dir=logging_dir,
-        turn_middlewares=turn_middlewares,
-        action_middlewares=action_middlewares,
+        middlewares=middlewares,
     )
     logger.info(f"OrchestratorAgent initialized with model={llm_config.model}, temperature={llm_config.temperature}")
     self.task_manager = task_manager
@@ -93,7 +90,7 @@ class OrchestratorAgent(Agent):
         metadata={"instruction": instruction},
     )
 
-    ctx = self.turn_pipeline.execute(ctx, self._core_turn)
+    ctx = self.pipeline.execute_turn(ctx, self._core_turn)
 
     if ctx.aborted:
       return {
