@@ -8,7 +8,7 @@ from src.core.agent.agent import Agent, AgentTask
 from src.core.agent.subagent import Subagent, SubagentTask
 from src.core.agent.subagent_report import SubagentReport, ContextItem, SubagentMeta
 from src.core.agent.agent_manager import AgentManager
-from src.core.agent.actions_result import ExecutionResult
+from src.core.action.actions_result import ExecutionResult
 
 __all__ = [
     "Agent",

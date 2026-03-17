@@ -8,7 +8,7 @@ from src.core.action import (
 )
 from src.core.middleware import Middleware, MiddlewarePipeline
 from src.core.common.utils import format_tool_output
-from src.core.agent.actions_result import ExecutionResult
+from src.core.action.actions_result import ExecutionResult
 from src.misc import pretty_log
 
 logger = logging.getLogger(__name__)

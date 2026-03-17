@@ -1,16 +1,13 @@
 """Tests for the unified event-based middleware pipeline."""
 
-import pytest
-
 from src.core.action.actions import (
     BashAction, ReadAction, WriteAction, EditAction, FinishAction, GrepAction,
 )
-from src.core.agent.actions_result import ExecutionResult
+from src.core.action.actions_result import ExecutionResult
 from src.core.middleware import (
     Middleware,
     MiddlewarePipeline,
     TurnContext,
-    ActionCallContext,
     PermissionMiddleware,
     OutputTruncationMiddleware,
     TimingMiddleware,
@@ -257,7 +254,7 @@ class TestActionHandlerWithMiddleware:
     """Integration: ActionHandler + middleware pipeline end-to-end."""
 
     def test_action_handler_uses_middleware(self):
-        from src.core.agent.action_handler import ActionHandler
+        from src.core.action.action_handler import ActionHandler
 
         handler = ActionHandler(
             actions={BashAction: _ok_handler},
@@ -273,7 +270,7 @@ cmd: "echo hello"
         assert not result.has_error
 
     def test_permission_middleware_blocks_in_handler(self):
-        from src.core.agent.action_handler import ActionHandler
+        from src.core.action.action_handler import ActionHandler
 
         handler = ActionHandler(
             actions={

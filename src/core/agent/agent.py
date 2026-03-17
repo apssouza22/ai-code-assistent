@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Dict, Any, Callable, Optional, List
 
 from src.core.middleware import Middleware, MiddlewarePipeline
-from src.core.agent.action_handler import ActionHandler
-from src.core.agent.actions_result import ExecutionResult
+from src.core.action.action_handler import ActionHandler
+from src.core.action.actions_result import ExecutionResult
 from src.core.llm import count_input_tokens, count_output_tokens
 from src.core.llm.llm_config import LlmConfig
 from src.misc import TurnLogger

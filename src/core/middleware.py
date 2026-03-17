@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple, Callable, Set, Type
 
 from src.core.action.actions import Action, BashAction
-from src.core.agent.actions_result import ExecutionResult
+from src.core.action.actions_result import ExecutionResult
 from src.core.common.utils import format_tool_output
 from src.core.llm import count_tokens_for_messages
 from src.misc import pretty_log, TurnLogger
@@ -221,7 +221,7 @@ class AuditLogMiddleware(Middleware):
         action_name = type(ctx.action).__name__
         status = "ERROR" if ctx.is_error else "OK"
         output_len = len(ctx.output) if ctx.output else 0
-        pretty_log.warning(
+        pretty_log.debug(
             f"[AUDIT] agent={self._agent_name} action={action_name} "
             f"status={status} output_len={output_len}",
             self._agent_name.upper()
