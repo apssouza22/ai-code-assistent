@@ -131,10 +131,8 @@ class Subagent(Agent):
         self.messages.append({"role": "user", "content": env_response})
 
         report = self._check_for_report(result.actions_executed)
-        ctx.metadata["report"] = report
-        ctx.metadata["env_response_preview"] = env_response[:200]
-
-        self._log_turn_file(ctx)
+        ctx.metadata["_report"] = report
+        ctx.metadata["messages_count"] = len(self.messages)
 
         return ctx
 
@@ -163,25 +161,7 @@ class Subagent(Agent):
             })
             return None
 
-        return ctx.metadata.get("report")
-
-    def _log_turn_file(self, ctx: TurnContext):
-        """Write structured turn data to the file logger (if enabled)."""
-        if not self.turn_logger:
-            return
-
-        result = ctx.result
-        turn_data = {
-            "task_type": self.agent_name,
-            "task_title": ctx.metadata.get("task_title"),
-            "llm_response": ctx.llm_response,
-            "actions_executed": [str(a) for a in result.actions_executed],
-            "env_responses": result.env_responses,
-            "messages_count": len(self.messages),
-            **{k: v for k, v in ctx.metadata.items()
-               if k not in ("task_title", "report", "env_response_preview")},
-        }
-        self.turn_logger.log_turn(ctx.turn_num, turn_data)
+        return ctx.metadata.get("_report")
 
     def _handle_report(self, report, task, turn_num):
         self.report = report

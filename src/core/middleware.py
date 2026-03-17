@@ -14,11 +14,11 @@ import logging
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple, Callable, Set, Type
 
-from src.core.action.actions import Action
+from src.core.action.actions import Action, BashAction
 from src.core.agent.actions_result import ExecutionResult
 from src.core.common.utils import format_tool_output
 from src.core.llm import count_tokens_for_messages
-from src.misc import pretty_log
+from src.misc import pretty_log, TurnLogger
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +198,7 @@ class TimingMiddleware(Middleware):
             elapsed = time.time() - start
             action_name = type(ctx.action).__name__
             if elapsed > 5.0:
-                pretty_log.warning(f"{action_name} took {elapsed:.2f}s", "ACTION_TIMING")
+                pretty_log.info(f"{action_name} took {elapsed:.2f}s", "ACTION_TIMING")
             else:
                 logger.debug(f"{action_name} completed in {elapsed:.2f}s")
         return ctx
@@ -213,15 +213,18 @@ class AuditLogMiddleware(Middleware):
     def before_action_call(self, ctx: ActionCallContext) -> ActionCallContext:
         action_name = type(ctx.action).__name__
         pretty_log.debug(f"Executing {action_name}", self._agent_name.upper())
+        if isinstance(ctx.action, BashAction):
+            pretty_log.debug(f"Command: {ctx.action.cmd}", self._agent_name.upper())
         return ctx
 
     def after_action_call(self, ctx: ActionCallContext) -> ActionCallContext:
         action_name = type(ctx.action).__name__
         status = "ERROR" if ctx.is_error else "OK"
         output_len = len(ctx.output) if ctx.output else 0
-        logger.info(
+        pretty_log.warning(
             f"[AUDIT] agent={self._agent_name} action={action_name} "
-            f"status={status} output_len={output_len}"
+            f"status={status} output_len={output_len}",
+            self._agent_name.upper()
         )
         return ctx
 
@@ -305,4 +308,47 @@ class ErrorRecoveryMiddleware(Middleware):
             )
             ctx.metadata["turn_error"] = str(exc)
 
+        return ctx
+
+
+class TurnFileLoggingMiddleware(Middleware):
+    """Writes structured turn data to a file logger after each turn.
+
+    Builds a log payload from common ``TurnContext`` fields (LLM response,
+    execution result) plus any non-private metadata.  Metadata keys that
+    start with ``_`` are treated as internal and excluded from the log.
+
+    Should be placed first in the middleware list so its ``after_turn``
+    executes last (after error-recovery, timing, etc. have enriched the
+    context).
+    """
+
+    def __init__(self, turn_logger: TurnLogger):
+        self._turn_logger = turn_logger
+
+    @property
+    def turn_logger(self) -> TurnLogger:
+        return self._turn_logger
+
+    def after_turn(self, ctx: TurnContext) -> TurnContext:
+        if not self._turn_logger or not self._turn_logger.enabled or not ctx.result:
+            return ctx
+
+        result = ctx.result
+        turn_data = {
+            "agent_name": ctx.agent_name,
+            "llm_response": ctx.llm_response,
+            "actions_executed": [str(a) for a in result.actions_executed],
+            "env_responses": result.env_responses,
+            "done": result.done,
+            "has_error": result.has_error,
+            "finish_message": result.finish_message,
+            "task_trajectories": result.task_trajectories,
+        }
+
+        for k, v in ctx.metadata.items():
+            if not k.startswith("_") and k not in turn_data:
+                turn_data[k] = v
+
+        self._turn_logger.log_turn(ctx.turn_num, turn_data)
         return ctx

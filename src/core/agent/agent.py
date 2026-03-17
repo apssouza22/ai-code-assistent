@@ -41,17 +41,21 @@ class Agent:
         self.max_turns = max_turns
         self.llm_config = llm_config
         self.api_base = api_base
+        self.turn_logger = TurnLogger(logging_dir, agent_name) if logging_dir else None
+
+        all_middlewares = list(middlewares or [])
+        if self.turn_logger:
+            from src.core.middleware import TurnFileLoggingMiddleware
+            all_middlewares.insert(0, TurnFileLoggingMiddleware(self.turn_logger))
+
         self.tool_handler = ActionHandler(
             actions=actions,
             agent_name=agent_name,
-            middlewares=middlewares,
+            middlewares=all_middlewares,
         )
         self.messages: List[Dict[str, str]] = []
         self.system_message = system_prompt
-        self.turn_logger = TurnLogger(logging_dir, agent_name) if logging_dir else None
-        self.pipeline = MiddlewarePipeline(middlewares)
-
-        self.messages = []
+        self.pipeline = MiddlewarePipeline(all_middlewares)
 
 
     @property

@@ -74,10 +74,9 @@ class OrchestratorAgent(Agent):
     self.turn_history.add_turn(turn)
     self.session_history.done = result.done
     self.session_history.finish_message = result.finish_message
-    ctx.metadata["turn"] = turn
+    ctx.metadata["_turn"] = turn
     ctx.metadata["user_message"] = user_message
-
-    self._log_turn_file(ctx)
+    ctx.metadata["state_snapshot"] = self.session_history.to_dict()
 
     return ctx
 
@@ -109,30 +108,8 @@ class OrchestratorAgent(Agent):
       'finish_message': result.finish_message,
       'has_error': result.has_error,
       'actions_executed': len(result.actions_executed),
-      'turn': ctx.metadata.get("turn"),
+      'turn': ctx.metadata.get("_turn"),
     }
-
-  def _log_turn_file(self, ctx: TurnContext):
-    """Write structured turn data to the file logger (if enabled)."""
-    if not self.turn_logger:
-      return
-
-    result = ctx.result
-    turn_data = {
-      "instruction": ctx.metadata.get("instruction"),
-      "user_message": ctx.metadata.get("user_message"),
-      "llm_response": ctx.llm_response,
-      "actions_executed": [str(a) for a in result.actions_executed],
-      "env_responses": result.env_responses,
-      "task_trajectories": result.task_trajectories,
-      "done": result.done,
-      "finish_message": result.finish_message,
-      "has_error": result.has_error,
-      "state_snapshot": self.session_history.to_dict(),
-      **{k: v for k, v in ctx.metadata.items()
-         if k not in ("instruction", "user_message", "turn")},
-    }
-    self.turn_logger.log_turn(ctx.turn_num, turn_data)
 
   def _get_llm_response(self, user_message: str) -> str:
     response = get_llm_response(

@@ -18,6 +18,7 @@ from src.core.middleware import (
     TurnLoggingMiddleware,
     TokenBudgetMiddleware,
     ErrorRecoveryMiddleware,
+    TurnFileLoggingMiddleware,
 )
 
 
@@ -505,6 +506,87 @@ class TestFullTurnPipelineIntegration:
         assert not ctx.aborted
         assert "turn_duration_secs" in ctx.metadata
         assert "pre_turn_token_count" in ctx.metadata
+
+
+class TestTurnFileLoggingMiddleware:
+
+    def test_logs_turn_data_to_file(self, tmp_path):
+        turn_logger = __import__("src.misc", fromlist=["TurnLogger"]).TurnLogger(tmp_path, "test_agent")
+        mw = TurnFileLoggingMiddleware(turn_logger)
+        pipeline = MiddlewarePipeline([mw])
+
+        ctx = _make_ctx(metadata={"instruction": "do something"})
+        ctx = pipeline.execute_turn(ctx, _identity_core)
+
+        log_file = tmp_path / "test_agent_turn_001.json"
+        assert log_file.exists()
+
+        import json
+        data = json.loads(log_file.read_text())
+        assert data["agent_name"] == "test_agent"
+        assert data["done"] is False
+        assert data["has_error"] is False
+        assert data["instruction"] == "do something"
+        assert data["env_responses"] == ["ok"]
+
+    def test_skips_when_no_result(self, tmp_path):
+        turn_logger = __import__("src.misc", fromlist=["TurnLogger"]).TurnLogger(tmp_path, "test_agent")
+        mw = TurnFileLoggingMiddleware(turn_logger)
+
+        ctx = _make_ctx()
+        ctx = mw.after_turn(ctx)
+
+        assert not list(tmp_path.glob("*.json"))
+
+    def test_skips_when_logger_disabled(self):
+        turn_logger = __import__("src.misc", fromlist=["TurnLogger"]).TurnLogger(None, "test_agent")
+        mw = TurnFileLoggingMiddleware(turn_logger)
+
+        ctx = _make_ctx()
+        ctx.result = ExecutionResult(
+            actions_executed=[], env_responses=[], has_error=False, done=False,
+        )
+        ctx = mw.after_turn(ctx)
+
+    def test_excludes_private_metadata_keys(self, tmp_path):
+        turn_logger = __import__("src.misc", fromlist=["TurnLogger"]).TurnLogger(tmp_path, "test_agent")
+        mw = TurnFileLoggingMiddleware(turn_logger)
+        pipeline = MiddlewarePipeline([mw])
+
+        ctx = _make_ctx(metadata={"visible_key": "yes", "_private_key": "no"})
+        ctx = pipeline.execute_turn(ctx, _identity_core)
+
+        import json
+        log_file = tmp_path / "test_agent_turn_001.json"
+        data = json.loads(log_file.read_text())
+        assert data["visible_key"] == "yes"
+        assert "_private_key" not in data
+
+    def test_includes_result_fields(self, tmp_path):
+        turn_logger = __import__("src.misc", fromlist=["TurnLogger"]).TurnLogger(tmp_path, "test_agent")
+        mw = TurnFileLoggingMiddleware(turn_logger)
+
+        def core_with_details(ctx):
+            ctx.llm_response = "I will do X"
+            ctx.result = ExecutionResult(
+                actions_executed=[],
+                env_responses=["done"],
+                has_error=False,
+                done=True,
+                finish_message="all done",
+                task_trajectories={"t1": {"status": "ok"}},
+            )
+            return ctx
+
+        pipeline = MiddlewarePipeline([mw])
+        ctx = pipeline.execute_turn(_make_ctx(), core_with_details)
+
+        import json
+        data = json.loads((tmp_path / "test_agent_turn_001.json").read_text())
+        assert data["llm_response"] == "I will do X"
+        assert data["done"] is True
+        assert data["finish_message"] == "all done"
+        assert data["task_trajectories"] == {"t1": {"status": "ok"}}
 
 
 # ===================================================================
