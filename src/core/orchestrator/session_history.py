@@ -40,26 +40,23 @@ class SessionHistory:
         """Convert complete state to prompt format for LLM."""
         sections = []
 
-        # Add task manager state
         sections.append("## Task Manager State\n")
         sections.append(self.task_store.task_summary())
-        sections.append("\n## Context Store\n")
-        sections.append(self._get_context_summary())
+        sections.append("\n## Available Context IDs\n")
+        sections.append(self._get_context_index())
 
-        # Add conversation history
         sections.append("\n## Conversation History\n")
         sections.append(self.turn_history.to_prompt())
 
         return "\n".join(sections)
 
-    def _get_context_summary(self) -> str:
-        """Return formatted summary of all stored contexts."""
-        if not self.context_store.get_all_contexts():
-            return "Context store is empty."
+    def _get_context_index(self) -> str:
+        """Return a compact index of stored context IDs (content is in conversation history)."""
+        all_contexts = list(self.context_store.get_all_contexts())
+        if not all_contexts:
+            return "No contexts stored yet."
 
-        lines = ["Context Store:"]
-        for context_id, context in self.context_store.get_all_contexts():
-            lines.append(f"  Id: {context_id}")
-            lines.append(f"  Reported by: {context.reported_by}")
-            lines.append(f"  Content: {context.content}")
+        lines = []
+        for context_id, context in all_contexts:
+            lines.append(f"- {context_id} (from: {context.reported_by})")
         return "\n".join(lines)

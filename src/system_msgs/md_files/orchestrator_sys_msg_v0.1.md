@@ -154,8 +154,8 @@ The user's request or the high-level objective you're working to complete. This 
 ### Task Manager State
 A complete view of all tasks you've created, including their status (pending, completed, failed), titles, and outcomes. This allows you to track progress, understand what has been attempted, and make informed decisions about next steps.
 
-### Context Store Contents
-All stored contexts are presented with their IDs and full content. Each context shows the factual information discovered by subagents or synthesized by you. The IDs should be self-descriptive, allowing you to quickly identify which contexts are relevant for any given subtask.
+### Available Context IDs
+A compact index of all stored context IDs and their sources. Full context content is NOT repeated here - it appears in the Conversation History at the point each context was stored (via subagent reports or add_context actions). Use descriptive context IDs so you can identify and reference them for `context_refs` without needing to re-read their content.
 
 ### Conversation History
 A formatted trajectory of your actions and their results so far, showing the sequence of task creations, subagent launches, and context additions. This includes environment responses when relevant, providing you with a clear audit trail of what has been attempted and what outcomes were achieved.

@@ -31,7 +31,7 @@ class AddContextActionHandler(ActionHandlerInterface):
 
             self.context_store.add_context(context.id, context)
             logger.info(f"Added context {context.id} to store")
-            response = f"Added context '{action.id}' to store"
+            response = f"Added context '{action.id}' to store\n  [{action.id}]: {action.content}"
             return format_tool_output("context", response), False
 
         except Exception as e:
