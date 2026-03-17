@@ -13,6 +13,14 @@ from src.core.action.actions import (
 
 from src.core.action.parser import SimpleActionParser
 from src.core.action.handler_interface import ActionHandlerInterface
+from src.core.action.middleware import (
+    ActionMiddleware,
+    ActionPipeline,
+    PermissionMiddleware,
+    OutputTruncationMiddleware,
+    TimingMiddleware,
+    AuditLogMiddleware,
+)
 
 
 __all__ = [
@@ -22,5 +30,11 @@ __all__ = [
     "ReportAction",
     "SimpleActionParser",
     "ActionHandlerInterface",
+    "ActionMiddleware",
+    "ActionPipeline",
+    "PermissionMiddleware",
+    "OutputTruncationMiddleware",
+    "TimingMiddleware",
+    "AuditLogMiddleware",
 ]
 

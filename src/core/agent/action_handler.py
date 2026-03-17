@@ -1,11 +1,12 @@
 """Stateless executor for single-turn agent execution with state management."""
 
 import logging
-from typing import Tuple, Dict, Callable
+from typing import Tuple, Dict, Callable, Optional, List
 
 from src.core.action import (
     FinishAction, Action, SimpleActionParser
 )
+from src.core.action.middleware import ActionMiddleware, ActionPipeline
 from src.core.common.utils import format_tool_output
 from src.core.agent.actions_result import ExecutionResult
 from src.misc import pretty_log
@@ -16,9 +17,15 @@ logger = logging.getLogger(__name__)
 class ActionHandler:
     """Executes a single turn of agent interaction"""
 
-    def __init__(self, actions: Dict[type, Callable], agent_name: str ):
+    def __init__(
+        self,
+        actions: Dict[type, Callable],
+        agent_name: str,
+        action_middlewares: Optional[List[ActionMiddleware]] = None,
+    ):
         self.agent_name = agent_name
         self._actions = actions
+        self._pipeline = ActionPipeline(action_middlewares)
 
     def execute(self, llm_output: str) -> ExecutionResult:
         """Execute actions from LLM output and return result.
@@ -47,12 +54,15 @@ class ActionHandler:
         finish_message = None
         done = False
         has_error = False
+
+        wrapped_handler = self._pipeline.wrap(self._raw_handle_action)
+
         for action in actions:
             try:
-                pretty_log.debug(f"Executing action: {action}", agent_name=self.agent_name.upper())
-                output, has_error = self._handle_action(action)
+                output, action_error = wrapped_handler(action)
                 actions_executed.append(action)
                 env_responses.append(output)
+                has_error = has_error or action_error
                 if isinstance(action, FinishAction):
                     finish_message = action.message
                     done = True
@@ -73,8 +83,8 @@ class ActionHandler:
             task_trajectories=None
         )
 
-    def _handle_action(self, action: Action) -> Tuple[str, bool]:
-        """Handle an action and return (response, is_error)."""
+    def _raw_handle_action(self, action: Action) -> Tuple[str, bool]:
+        """Core handler lookup and dispatch — the innermost call in the middleware chain."""
         handler = self._actions.get(type(action))
         if handler:
             return handler(action)

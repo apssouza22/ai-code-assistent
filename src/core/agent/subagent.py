@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Callable
 
 from src.core.action import ReportAction
+from src.core.action.middleware import ActionMiddleware
 from src.core.agent.agent import AgentTask, Agent
 from src.core.agent.subagent_report import ContextItem, SubagentMeta, SubagentReport
 from src.core.agent.turn_middleware import TurnContext, TurnMiddleware
@@ -40,6 +41,7 @@ class Subagent(Agent):
         api_base: Optional[str] = None,
         logging_dir: Optional[Path] = None,
         turn_middlewares: Optional[List[TurnMiddleware]] = None,
+        action_middlewares: Optional[List[ActionMiddleware]] = None,
     ):
         self.report: Optional[SubagentReport] = None
         super().__init__(
@@ -51,6 +53,7 @@ class Subagent(Agent):
             logging_dir=logging_dir,
             agent_name=agent_name,
             turn_middlewares=turn_middlewares,
+            action_middlewares=action_middlewares,
         )
 
 

@@ -5,6 +5,9 @@ from src.core.action import TaskCreateAction
 from src.core.action.actions import LaunchSubagentAction, BatchTodoAction, AddNoteAction, ViewAllNotesAction, FinishAction, ReportAction, BashAction, GrepAction, GlobAction, LSAction, ReadAction, \
   WriteAction, WriteTempScriptAction, AddContextAction, MultiEditAction, FileMetadataAction, EditAction
 from src.core.action.handlers import FinishActionHandler, ReportActionHandler
+from src.core.action.middleware import (
+    AuditLogMiddleware, OutputTruncationMiddleware, PermissionMiddleware, TimingMiddleware,
+)
 from src.core.agent import AgentManager, Subagent
 from src.core.agent.turn_middleware import (
     TurnLoggingMiddleware, TokenBudgetMiddleware, ErrorRecoveryMiddleware,
@@ -33,6 +36,23 @@ SUBAGENT_MODEL = "openai/gpt-5-mini-2025-08-07"
 
 ORCHESTRATOR_TOKEN_BUDGET = 120_000
 SUBAGENT_TOKEN_BUDGET = 90_000
+ACTION_OUTPUT_MAX_CHARS = 30_000
+
+EXPLORER_ALLOWED_ACTIONS = {
+    FinishAction, ReportAction, BashAction,
+    GrepAction, GlobAction, LSAction,
+    ReadAction, FileMetadataAction,
+    AddNoteAction, ViewAllNotesAction, BatchTodoAction,
+    AddContextAction, WriteTempScriptAction,
+}
+
+CODER_ALLOWED_ACTIONS = {
+    FinishAction, ReportAction, BashAction,
+    GrepAction, GlobAction, LSAction,
+    ReadAction, WriteAction, EditAction, MultiEditAction, FileMetadataAction,
+    AddNoteAction, ViewAllNotesAction, BatchTodoAction,
+    AddContextAction, WriteTempScriptAction,
+}
 
 
 def create_orchestrator_agent(
@@ -64,6 +84,20 @@ def create_orchestrator_agent(
       TokenBudgetMiddleware(max_tokens=SUBAGENT_TOKEN_BUDGET, model=SUBAGENT_MODEL),
   ]
 
+  explorer_action_middlewares = [
+      AuditLogMiddleware(agent_name="explorer"),
+      TimingMiddleware(),
+      PermissionMiddleware(allowed_actions=EXPLORER_ALLOWED_ACTIONS, agent_name="explorer"),
+      OutputTruncationMiddleware(max_chars=ACTION_OUTPUT_MAX_CHARS),
+  ]
+
+  coder_action_middlewares = [
+      AuditLogMiddleware(agent_name="coder"),
+      TimingMiddleware(),
+      PermissionMiddleware(allowed_actions=CODER_ALLOWED_ACTIONS, agent_name="coder"),
+      OutputTruncationMiddleware(max_chars=ACTION_OUTPUT_MAX_CHARS),
+  ]
+
   explorer_agent = Subagent(
       system_prompt=load_explorer_system_message(),
       actions=actions,
@@ -71,6 +105,7 @@ def create_orchestrator_agent(
       llm_config=subagent_llm_config,
       logging_dir=logging_dir,
       turn_middlewares=subagent_turn_middlewares,
+      action_middlewares=explorer_action_middlewares,
   )
 
   coder_agent = Subagent(
@@ -80,6 +115,7 @@ def create_orchestrator_agent(
       llm_config=subagent_llm_config,
       logging_dir=logging_dir,
       turn_middlewares=subagent_turn_middlewares,
+      action_middlewares=coder_action_middlewares,
   )
 
   agent_manager = AgentManager(
@@ -107,6 +143,12 @@ def create_orchestrator_agent(
       TokenBudgetMiddleware(max_tokens=ORCHESTRATOR_TOKEN_BUDGET, model=ORCHESTRATOR_MODEL),
   ]
 
+  orchestrator_action_middlewares = [
+      AuditLogMiddleware(agent_name="orchestrator"),
+      TimingMiddleware(),
+      OutputTruncationMiddleware(max_chars=ACTION_OUTPUT_MAX_CHARS),
+  ]
+
   return OrchestratorAgent(
       system_prompt=load_orchestrator_system_message(),
       actions=orchestrator_action_handlers,
@@ -116,6 +158,7 @@ def create_orchestrator_agent(
       llm_config=orchestrator_llm_config,
       logging_dir=logging_dir,
       turn_middlewares=orchestrator_turn_middlewares,
+      action_middlewares=orchestrator_action_middlewares,
   )
 
 

@@ -4,7 +4,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Callable
 
-from src.core.agent import ExecutionResult, Agent, AgentTask
+from src.core.action.middleware import ActionMiddleware
+from src.core.agent import Agent, AgentTask
 from src.core.agent.turn_middleware import TurnContext, TurnMiddleware
 from src.core.context import ContextStore
 from src.core.llm import get_llm_response, LlmConfig
@@ -31,6 +32,7 @@ class OrchestratorAgent(Agent):
       llm_config: LlmConfig,
       logging_dir: Optional[Path] = None,
       turn_middlewares: Optional[List[TurnMiddleware]] = None,
+      action_middlewares: Optional[List[ActionMiddleware]] = None,
   ):
     super().__init__(
         system_prompt=system_prompt,
@@ -39,6 +41,7 @@ class OrchestratorAgent(Agent):
         llm_config=llm_config,
         logging_dir=logging_dir,
         turn_middlewares=turn_middlewares,
+        action_middlewares=action_middlewares,
     )
     logger.info(f"OrchestratorAgent initialized with model={llm_config.model}, temperature={llm_config.temperature}")
     self.task_manager = task_manager

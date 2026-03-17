@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Any, Callable, Optional, List
 
+from src.core.action.middleware import ActionMiddleware
 from src.core.agent.action_handler import ActionHandler
 from src.core.agent.actions_result import ExecutionResult
 from src.core.agent.turn_middleware import TurnMiddleware, TurnPipeline
@@ -36,12 +37,17 @@ class Agent:
         api_base: Optional[str] = None,
         logging_dir: Optional[Path] = None,
         turn_middlewares: Optional[List[TurnMiddleware]] = None,
+        action_middlewares: Optional[List[ActionMiddleware]] = None,
     ):
         self.agent_name = agent_name
         self.max_turns = max_turns
         self.llm_config = llm_config
         self.api_base = api_base
-        self.action_handler = ActionHandler(actions=actions, agent_name=agent_name)
+        self.action_handler = ActionHandler(
+            actions=actions,
+            agent_name=agent_name,
+            action_middlewares=action_middlewares,
+        )
         self.messages: List[Dict[str, str]] = []
         self.system_message = system_prompt
         self.turn_logger = TurnLogger(logging_dir, agent_name) if logging_dir else None
