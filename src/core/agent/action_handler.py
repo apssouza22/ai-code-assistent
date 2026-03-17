@@ -36,7 +36,7 @@ class ActionHandler:
         Returns:
             ExecutionResult containing executed actions and responses
         """
-        actions, env_responses, has_error = self._get_actions(llm_output)
+        actions, env_responses, has_error = self.get_tools(llm_output)
         if not actions:
             return ExecutionResult(
                 actions_executed=[],
@@ -45,28 +45,26 @@ class ActionHandler:
                 done=False
             )
 
-        result = self._execute_actions(actions, env_responses)
-        result.has_error = result.has_error or has_error
-        return result
 
-    def _execute_actions(self, actions: list[Action], env_responses) -> ExecutionResult:
+
+    def handle_tools(self, tools: list[Action], env_responses) -> ExecutionResult:
         actions_executed = []
         finish_message = None
         done = False
         has_error = False
 
-        for action in actions:
+        for tool in tools:
             try:
                 output, action_error = self._pipeline.execute_action(
-                    action, self._raw_handle_action, self.agent_name
+                    tool, self._tool_call, self.agent_name
                 )
-                actions_executed.append(action)
+                actions_executed.append(tool)
                 env_responses.append(output)
                 has_error = has_error or action_error
-                if isinstance(action, FinishAction):
-                    finish_message = action.message
+                if isinstance(tool, FinishAction):
+                    finish_message = tool.message
                     done = True
-                    pretty_log.success(f"Task finished: {action.message}", self.agent_name.upper())
+                    pretty_log.success(f"Task finished: {tool.message}", self.agent_name.upper())
                     break
 
             except Exception as e:
@@ -83,7 +81,7 @@ class ActionHandler:
             task_trajectories=None
         )
 
-    def _raw_handle_action(self, action: Action) -> Tuple[str, bool]:
+    def _tool_call(self, action: Action) -> Tuple[str, bool]:
         """Core handler lookup and dispatch — the innermost call in the middleware chain."""
         handler = self._actions.get(type(action))
         if handler:
@@ -93,7 +91,7 @@ class ActionHandler:
         return format_tool_output("unknown", content), True
 
 
-    def _get_actions(self, llm_output):
+    def get_tools(self, llm_output) -> Tuple[List[Action], List[str], bool]:
         actions, parsing_errors, found_action_attempt = SimpleActionParser.parse_llm_output(
             llm_output
         )

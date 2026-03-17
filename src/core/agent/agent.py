@@ -41,7 +41,7 @@ class Agent:
         self.max_turns = max_turns
         self.llm_config = llm_config
         self.api_base = api_base
-        self.action_handler = ActionHandler(
+        self.tool_handler = ActionHandler(
             actions=actions,
             agent_name=agent_name,
             middlewares=middlewares,
@@ -71,4 +71,14 @@ class Agent:
 
     def handle_llm_response(self, llm_response: str) -> ExecutionResult:
         """Execute actions based on LLM response."""
-        return self.action_handler.execute(llm_response)
+        actions, env_responses, has_error = self.tool_handler.get_tools(llm_response)
+        if not actions:
+            return ExecutionResult(
+                actions_executed=[],
+                env_responses=env_responses,
+                has_error=True,
+                done=False
+            )
+        result = self.tool_handler.handle_tools(actions, env_responses)
+        result.has_error = result.has_error or has_error
+        return result

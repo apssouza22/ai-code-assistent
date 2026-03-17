@@ -213,7 +213,7 @@ class Subagent(Agent):
         try:
             llm_response = self._get_llm_response(self.messages)
             self.messages.append({"role": "assistant", "content": llm_response})
-            result = self.action_handler.execute(llm_response)
+            result = self.handle_llm_response(llm_response)
             report = self._check_for_report(result.actions_executed)
 
             if report:

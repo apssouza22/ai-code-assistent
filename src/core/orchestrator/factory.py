@@ -30,7 +30,7 @@ from src.system_msgs.system_msg_loader import load_explorer_system_message, load
   load_orchestrator_system_message
 
 ORCHESTRATOR_MODEL = "openai/gpt-4.1-2025-04-14"
-SUBAGENT_MODEL = "openai/gpt-5-mini-2025-08-07"
+SUBAGENT_MODEL = "openai/gpt-4.1-2025-04-14"
 
 ORCHESTRATOR_TOKEN_BUDGET = 120_000
 SUBAGENT_TOKEN_BUDGET = 90_000
