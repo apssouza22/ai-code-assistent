@@ -8,6 +8,7 @@ from typing import List, Dict, Optional, Callable
 from src.core.action import ReportAction
 from src.core.agent.agent import AgentTask, Agent
 from src.core.agent.subagent_report import ContextItem, SubagentMeta, SubagentReport
+from src.core.agent.turn_middleware import TurnContext, TurnMiddleware
 from src.core.llm import get_llm_response
 from src.core.llm.llm_config import LlmConfig
 from src.misc import pretty_log
@@ -22,8 +23,8 @@ class SubagentTask(AgentTask):
     title: str
     description: str
     task_id: str
-    task_context: Dict[str, str]  # Resolved context content from store
-    bootstrap_ctx: List[Dict[str, str]]  # List of {"path": str, "content": str, "reason": str}
+    task_context: Dict[str, str]
+    bootstrap_ctx: List[Dict[str, str]]
 
 
 class Subagent(Agent):
@@ -37,7 +38,8 @@ class Subagent(Agent):
         llm_config: LlmConfig,
         max_turns: int = 30,
         api_base: Optional[str] = None,
-        logging_dir: Optional[Path] = None
+        logging_dir: Optional[Path] = None,
+        turn_middlewares: Optional[List[TurnMiddleware]] = None,
     ):
         self.report: Optional[SubagentReport] = None
         super().__init__(
@@ -47,7 +49,8 @@ class Subagent(Agent):
             llm_config=llm_config,
             api_base=api_base,
             logging_dir=logging_dir,
-            agent_name=agent_name
+            agent_name=agent_name,
+            turn_middlewares=turn_middlewares,
         )
 
 
@@ -55,14 +58,12 @@ class Subagent(Agent):
     def _build_task_prompt(task: SubagentTask) -> str:
         """Build the initial task prompt with all context."""
         sections = [f"# Task: {task.title}\n", f"{task.description}\n"]
-        # Include resolved contexts
         if task.task_context:
             sections.append("## Provided Context\n")
             for ctx_id, content in task.task_context.items():
                 sections.append(f"### Context: {ctx_id}\n")
                 sections.append(f"{content}\n")
 
-        # Include bootstrap files/dirs
         if task.bootstrap_ctx:
             sections.append("## Relevant Files/Directories\n")
             for item in task.bootstrap_ctx:
@@ -92,8 +93,8 @@ class Subagent(Agent):
                     comments=action.comments,
                     meta=SubagentMeta(
                         trajectory=self.messages.copy() if hasattr(self, 'messages') else None,
-                        total_input_tokens=0,  # Will be set in run()
-                        total_output_tokens=0  # Will be set in run()
+                        total_input_tokens=0,
+                        total_output_tokens=0
                     )
                 )
         return None
@@ -110,39 +111,77 @@ class Subagent(Agent):
         ]
 
         for turn_num in range(self.max_turns):
-            pretty_log.debug(f"Executing turn {turn_num + 1}", self.agent_name.upper())
-            try:
-                report = self._handle_turn(task, turn_num)
-                if report:
-                    self._handle_report(report, task, turn_num)
-                    return report
-            except Exception as e:
-                pretty_log.error(f"Error in turn {turn_num + 1}: {e}", self.agent_name.upper())
-                self.messages.append({"role": "user", "content": f"Error occurred: {str(e)}. Please continue."})
+            report = self._handle_turn(task, turn_num)
+            if report:
+                self._handle_report(report, task, turn_num)
+                return report
 
-        self._handle_max_turns_exceeded(task)
+        return self._handle_max_turns_exceeded(task)
 
-
-    def _handle_turn(self, task, turn_num):
+    def _core_turn(self, ctx: TurnContext) -> TurnContext:
+        """Core turn logic: LLM call, action execution, message bookkeeping."""
         llm_response = self._get_llm_response(self.messages)
         self.messages.append({"role": "assistant", "content": llm_response})
+        ctx.llm_response = llm_response
+
         result = self.handle_llm_response(llm_response)
+        ctx.result = result
+
         env_response = "\n".join(result.env_responses)
         self.messages.append({"role": "user", "content": env_response})
-        report = self._check_for_report(result.actions_executed)
 
-        pretty_log.debug(f"Environment response received: {env_response[:200]}", self.agent_name.upper())
-        if self.turn_logger:
-            turn_data = {
-                "task_type": self.agent_name,
-                "task_title": task.title,
-                "llm_response": llm_response,
-                "actions_executed": [str(action) for action in result.actions_executed],
-                "env_responses": result.env_responses,
-                "messages_count": len(self.messages)
-            }
-            self.turn_logger.log_turn(turn_num + 1, turn_data)
-        return report
+        report = self._check_for_report(result.actions_executed)
+        ctx.metadata["report"] = report
+        ctx.metadata["env_response_preview"] = env_response[:200]
+
+        self._log_turn_file(ctx)
+
+        return ctx
+
+    def _handle_turn(self, task, turn_num):
+        ctx = TurnContext(
+            agent_name=self.agent_name,
+            turn_num=turn_num + 1,
+            max_turns=self.max_turns,
+            messages=self.messages,
+            metadata={"task_title": task.title},
+        )
+
+        ctx = self.turn_pipeline.execute(ctx, self._core_turn)
+
+        if ctx.aborted:
+            self.messages.append({
+                "role": "user",
+                "content": f"Turn aborted: {ctx.abort_reason}. Please continue.",
+            })
+            return None
+
+        if ctx.metadata.get("turn_error"):
+            self.messages.append({
+                "role": "user",
+                "content": f"Error occurred: {ctx.metadata['turn_error']}. Please continue.",
+            })
+            return None
+
+        return ctx.metadata.get("report")
+
+    def _log_turn_file(self, ctx: TurnContext):
+        """Write structured turn data to the file logger (if enabled)."""
+        if not self.turn_logger:
+            return
+
+        result = ctx.result
+        turn_data = {
+            "task_type": self.agent_name,
+            "task_title": ctx.metadata.get("task_title"),
+            "llm_response": ctx.llm_response,
+            "actions_executed": [str(a) for a in result.actions_executed],
+            "env_responses": result.env_responses,
+            "messages_count": len(self.messages),
+            **{k: v for k, v in ctx.metadata.items()
+               if k not in ("task_title", "report", "env_response_preview")},
+        }
+        self.turn_logger.log_turn(ctx.turn_num, turn_data)
 
     def _handle_report(self, report, task, turn_num):
         self.report = report

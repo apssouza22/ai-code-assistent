@@ -6,6 +6,9 @@ from src.core.action.actions import LaunchSubagentAction, BatchTodoAction, AddNo
   WriteAction, WriteTempScriptAction, AddContextAction, MultiEditAction, FileMetadataAction, EditAction
 from src.core.action.handlers import FinishActionHandler, ReportActionHandler
 from src.core.agent import AgentManager, Subagent
+from src.core.agent.turn_middleware import (
+    TurnLoggingMiddleware, TokenBudgetMiddleware, ErrorRecoveryMiddleware,
+)
 from src.core.bash import CommandExecutor, DockerExecutor, FileManager, SearchManager
 from src.core.bash.bash_handler import BashActionHandler
 from src.core.bash.search_handlers import LSActionHandler, GlobActionHandler, GrepActionHandler
@@ -24,8 +27,12 @@ from src.core.todo.todo_handler import BatchTodoActionHandler
 from src.core.todo.todo_manager import TodoManager
 from src.system_msgs.system_msg_loader import load_explorer_system_message, load_coder_system_message, \
   load_orchestrator_system_message
+
 ORCHESTRATOR_MODEL = "openai/gpt-4.1-2025-04-14"
 SUBAGENT_MODEL = "openai/gpt-5-mini-2025-08-07"
+
+ORCHESTRATOR_TOKEN_BUDGET = 120_000
+SUBAGENT_TOKEN_BUDGET = 90_000
 
 
 def create_orchestrator_agent(
@@ -51,12 +58,19 @@ def create_orchestrator_agent(
 
   actions = get_sub_agent_actions(command_executor, context_store, file_manager, scratchpad_manager, search_manager, todo_manager)
 
+  subagent_turn_middlewares = [
+      TurnLoggingMiddleware(),
+      ErrorRecoveryMiddleware(),
+      TokenBudgetMiddleware(max_tokens=SUBAGENT_TOKEN_BUDGET, model=SUBAGENT_MODEL),
+  ]
+
   explorer_agent = Subagent(
       system_prompt=load_explorer_system_message(),
       actions=actions,
       agent_name="explorer",
       llm_config=subagent_llm_config,
       logging_dir=logging_dir,
+      turn_middlewares=subagent_turn_middlewares,
   )
 
   coder_agent = Subagent(
@@ -65,6 +79,7 @@ def create_orchestrator_agent(
       agent_name="coder",
       llm_config=subagent_llm_config,
       logging_dir=logging_dir,
+      turn_middlewares=subagent_turn_middlewares,
   )
 
   agent_manager = AgentManager(
@@ -86,6 +101,12 @@ def create_orchestrator_agent(
   lunch_subagent_action_handler = LaunchSubagentActionHandler(agent_launcher)
   orchestrator_action_handlers = {**actions, TaskCreateAction: create_task_action_handler.handle, LaunchSubagentAction: lunch_subagent_action_handler.handle}
 
+  orchestrator_turn_middlewares = [
+      TurnLoggingMiddleware(),
+      ErrorRecoveryMiddleware(),
+      TokenBudgetMiddleware(max_tokens=ORCHESTRATOR_TOKEN_BUDGET, model=ORCHESTRATOR_MODEL),
+  ]
+
   return OrchestratorAgent(
       system_prompt=load_orchestrator_system_message(),
       actions=orchestrator_action_handlers,
@@ -94,6 +115,7 @@ def create_orchestrator_agent(
       context_store=context_store,
       llm_config=orchestrator_llm_config,
       logging_dir=logging_dir,
+      turn_middlewares=orchestrator_turn_middlewares,
   )
 
 

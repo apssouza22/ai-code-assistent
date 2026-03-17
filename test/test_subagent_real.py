@@ -172,5 +172,5 @@ def main():
         print(f"{model}: {status}")
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+    # main()
