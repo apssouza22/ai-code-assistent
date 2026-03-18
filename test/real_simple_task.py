@@ -150,5 +150,5 @@ def main():
         print(f"{model} - {test_name}: {status}")
 
 #
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

@@ -1,5 +1,6 @@
 runs/
 logs/
+llm_responses/
 
 .DS_Store
 
