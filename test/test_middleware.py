@@ -4,7 +4,7 @@ from src.core.action.actions import (
     BashAction, ReadAction, WriteAction, EditAction, FinishAction, GrepAction,
 )
 from src.core.action.actions_result import ExecutionResult
-from src.core.middleware import (
+from src.core.common.middleware import (
     Middleware,
     MiddlewarePipeline,
     TurnContext,
