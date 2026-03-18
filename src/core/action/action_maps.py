@@ -17,8 +17,24 @@ ACTION_MAP: Dict[str, Type[Action]] = {
     'finish': FinishAction,
     'user_input': UserInputAction,
 
-    # Todo actions (unified under one tag)
+    # Todo actions
     'todo': BatchTodoAction,
+
+    # File actions
+    'read_file': ReadAction,
+    'write_file': WriteAction,
+    'edit_file': EditAction,
+    'multi_edit_file': MultiEditAction,
+    'file_metadata': FileMetadataAction,
+
+    # Search actions
+    'grep': GrepAction,
+    'glob': GlobAction,
+    'ls': LSAction,
+
+    # Scratchpad actions
+    'add_note': AddNoteAction,
+    'view_all_notes': ViewAllNotesAction,
 
     # Task management
     'task_create': TaskCreateAction,
@@ -26,24 +42,4 @@ ACTION_MAP: Dict[str, Type[Action]] = {
     'launch_subagent': LaunchSubagentAction,
     'report': ReportAction,
     'write_temp_script': WriteTempScriptAction,
-}
-
-# Sub-action mappings for tags that have multiple action types
-FILE_ACTIONS: Dict[str, Type[Action]] = {
-    'read': ReadAction,
-    'write': WriteAction,
-    'edit': EditAction,
-    'multi_edit': MultiEditAction,
-    'metadata': FileMetadataAction,
-}
-
-SEARCH_ACTIONS: Dict[str, Type[Action]] = {
-    'grep': GrepAction,
-    'glob': GlobAction,
-    'ls': LSAction,
-}
-
-SCRATCHPAD_ACTIONS: Dict[str, Type[Action]] = {
-    'add_note': AddNoteAction,
-    'view_all_notes': ViewAllNotesAction,
 }

@@ -202,3 +202,4 @@ cython_debug/
 .cursorindexingignore
 /.idea/
 /test/tracing_logs/
+/specs/

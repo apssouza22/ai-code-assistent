@@ -261,10 +261,10 @@ class TestActionHandlerWithMiddleware:
             agent_name="test",
             middlewares=[OutputTruncationMiddleware(max_chars=50)],
         )
-
-        result = handler.execute("""<bash>
+        actions, env_responses, has_error = handler.get_tools("""<bash>
 cmd: "echo hello"
 </bash>""")
+        result = handler.handle_tools(actions, env_responses)
 
         assert len(result.actions_executed) == 1
         assert not result.has_error
@@ -286,12 +286,11 @@ cmd: "echo hello"
             ],
         )
 
-        result = handler.execute("""<file>
-action: write
+        actions, env_responses, has_error = handler.get_tools("""<write_file>
 file_path: "/tmp/bad"
 content: "should be blocked"
-</file>""")
-
+</write_file>""")
+        result = handler.handle_tools(actions, env_responses)
         assert len(result.actions_executed) == 1
         assert result.has_error is True
         assert "PERMISSION DENIED" in result.env_responses[0]

@@ -27,26 +27,6 @@ class ActionHandler:
         self._actions = actions
         self._pipeline = MiddlewarePipeline(middlewares)
 
-    def execute(self, llm_output: str) -> ExecutionResult:
-        """Execute actions from LLM output and return result.
-
-        Args:
-            llm_output: Raw output from the LLM
-
-        Returns:
-            ExecutionResult containing executed actions and responses
-        """
-        actions, env_responses, has_error = self.get_tools(llm_output)
-        if not actions:
-            return ExecutionResult(
-                actions_executed=[],
-                env_responses=env_responses,
-                has_error=True,
-                done=False
-            )
-
-
-
     def handle_tools(self, tools: list[Action], env_responses) -> ExecutionResult:
         actions_executed = []
         finish_message = None

@@ -88,38 +88,34 @@ view_all: true
         """Test parsing of various file operations."""
         test_cases = [
             # Read action
-            ("""<file>
-action: read
+            ("""<read_file>
 file_path: "/path/to/file.txt"
 offset: 100
 limit: 50
-</file>""", ReadAction, {"file_path": "/path/to/file.txt", "offset": 100, "limit": 50}),
+</read_file>""", ReadAction, {"file_path": "/path/to/file.txt", "offset": 100, "limit": 50}),
 
             # Write action
-            ("""<file>
-action: write
+            ("""<write_file>
 file_path: "/tmp/output.txt"
 content: |
   Line 1
   Line 2
   Line 3
-</file>""", WriteAction, {"file_path": "/tmp/output.txt"}),
+</write_file>""", WriteAction, {"file_path": "/tmp/output.txt"}),
 
             # Edit action
-            ("""<file>
-action: edit
+            ("""<edit_file>
 file_path: "/src/main.py"
 old_string: "def old_function():"
 new_string: "def new_function():"
 replace_all: true
-</file>""",
+</edit_file>""",
              EditAction,
              {"file_path": "/src/main.py", "replace_all": True}
              ),
 
             # Multi-edit action
-            ("""<file>
-action: multi_edit
+            ("""<multi_edit_file>
 file_path: "/src/config.py"
 edits:
   - old_string: "DEBUG = False"
@@ -127,16 +123,15 @@ edits:
   - old_string: "PORT = 8080"
     new_string: "PORT = 3000"
     replace_all: true
-</file>""", MultiEditAction, {"file_path": "/src/config.py"}),
+</multi_edit_file>""", MultiEditAction, {"file_path": "/src/config.py"}),
 
             # Metadata action
-            ("""<file>
-action: metadata
+            ("""<file_metadata>
 file_paths:
   - "/file1.txt"
   - "/file2.py"
   - "/dir/file3.js"
-</file>""", FileMetadataAction, {}),
+</file_metadata>""", FileMetadataAction, {}),
         ]
 
         for xml_content, expected_type, expected_attrs in test_cases:
@@ -152,29 +147,26 @@ file_paths:
         """Test parsing of search operations."""
         test_cases = [
             # Grep action
-            ("""<search>
-action: grep
+            ("""<grep>
 pattern: "TODO|FIXME"
 path: "/src"
 include: "*.py"
-</search>""", GrepAction, {"pattern": "TODO|FIXME", "path": "/src", "include": "*.py"}),
+</grep>""", GrepAction, {"pattern": "TODO|FIXME", "path": "/src", "include": "*.py"}),
 
             # Glob action
-            ("""<search>
-action: glob
+            ("""<glob>
 pattern: "**/*.test.js"
 path: "/tests"
-</search>""", GlobAction, {"pattern": "**/*.test.js", "path": "/tests"}),
+</glob>""", GlobAction, {"pattern": "**/*.test.js", "path": "/tests"}),
 
             # LS action
-            ("""<search>
-action: ls
+            ("""<ls>
 path: "/home/user/projects"
 ignore:
   - ".git"
   - "__pycache__"
   - "node_modules"
-</search>""", LSAction, {"path": "/home/user/projects"}),
+</ls>""", LSAction, {"path": "/home/user/projects"}),
         ]
 
         for xml_content, expected_type, expected_attrs in test_cases:
@@ -190,15 +182,13 @@ ignore:
         """Test parsing of scratchpad operations."""
         test_cases = [
             # Add note
-            ("""<scratchpad>
-action: add_note
+            ("""<add_note>
 content: "Important observation about the codebase structure"
-</scratchpad>""", AddNoteAction, {"content": "Important observation about the codebase structure"}),
+</add_note>""", AddNoteAction, {"content": "Important observation about the codebase structure"}),
 
             # View all notes
-            ("""<scratchpad>
-action: view_all_notes
-</scratchpad>""", ViewAllNotesAction, {}),
+            ("""<view_all_notes>
+</view_all_notes>""", ViewAllNotesAction, {}),
         ]
 
         for xml_content, expected_type, expected_attrs in test_cases:
@@ -319,11 +309,10 @@ cmd: "mkdir -p /tmp/test_dir"
 
 Now I'll create a file:
 
-<file>
-action: write
+<write_file>
 file_path: "/tmp/test_dir/README.md"
 content: "# Test Project"
-</file>
+</write_file>
 
 <todo>
 operations:
@@ -354,16 +343,14 @@ cmd: this is not valid yaml
 </bash>""",
 
             # Missing required field
-            """<file>
-action: write
+            """<write_file>
 content: "Missing file_path field"
-</file>""",
+</write_file>""",
 
-            # Invalid action type
-            """<file>
-action: invalid_action
+            # Unknown action tag
+            """<unknown_action>
 file_path: "/tmp/file.txt"
-</file>""",
+</unknown_action>""",
 
             # Invalid todo operation
             """<todo>
@@ -415,27 +402,24 @@ class TestActionIntegration:
         """Test that all action types are handled correctly."""
         parser = SimpleActionParser()
 
-        # Parse a comprehensive set of actions
         test_input = """
 <bash>cmd: "ls"</bash>
 <todo>operations: [{action: add, content: "test"}]</todo>
-<file>action: read
-file_path: "/test.txt"</file>
-<search>action: grep
-pattern: "test"</search>
-<scratchpad>action: add_note
-content: "note"</scratchpad>
+<read_file>
+file_path: "/test.txt"</read_file>
+<grep>
+pattern: "test"</grep>
+<add_note>
+content: "note"</add_note>
 <finish>message: "done"</finish>
 """
 
         actions, errors, found = parser.parse(test_input)
 
-        # Verify all actions parsed successfully
         assert len(actions) == 6
         assert not errors
         assert found
 
-        # Verify action types
         expected_types = [
             BashAction, BatchTodoAction, ReadAction,
             GrepAction, AddNoteAction, FinishAction

@@ -141,16 +141,14 @@ Stdout and stderr from command execution
 Read file contents with optional offset and limit for large files.
 
 ```xml
-<file>
-action: read
+<read_file>
 file_path: string
 offset: integer
 limit: integer
-</file>
+</read_file>
 ```
 
 **Field descriptions:**
-- `action`: Must be "read" for this operation
 - `file_path`: Absolute path to the file to read
 - `offset`: Optional line number to start reading from
 - `limit`: Optional maximum number of lines to read
@@ -166,15 +164,13 @@ File contents with line numbers (cat -n format)
 Get metadata for multiple files to understand structure without full content.
 
 ```xml
-<file>
-action: metadata
+<file_metadata>
 file_paths: list
   - string
-</file>
+</file_metadata>
 ```
 
 **Field descriptions:**
-- `action`: Must be "metadata" for this operation
 - `file_paths`: List of absolute file paths (maximum 10 files)
 
 **Environment output:**
@@ -188,16 +184,14 @@ For each file: path, size, permissions, modification time, file type
 Search file contents using regex patterns.
 
 ```xml
-<search>
-action: grep
+<grep>
 pattern: string
 path: string
 include: string
-</search>
+</grep>
 ```
 
 **Field descriptions:**
-- `action`: Must be "grep" for this operation
 - `pattern`: Regular expression pattern to search for
 - `path`: Optional directory to search in (defaults to current directory)
 - `include`: Optional file pattern filter (e.g., "*.py")
@@ -213,15 +207,13 @@ Matching lines with file paths and line numbers
 Find files by name pattern.
 
 ```xml
-<search>
-action: glob
+<glob>
 pattern: string
 path: string
-</search>
+</glob>
 ```
 
 **Field descriptions:**
-- `action`: Must be "glob" for this operation
 - `pattern`: Glob pattern to match files (e.g., "**/*.js")
 - `path`: Optional directory to search in (defaults to current directory)
 
@@ -229,6 +221,28 @@ path: string
 ```xml
 <search_output>
 List of file paths matching the pattern
+</search_output>
+```
+
+#### 6. List Directory
+List directory contents.
+
+```xml
+<ls>
+path: string
+ignore: list
+  - string
+</ls>
+```
+
+**Field descriptions:**
+- `path`: Absolute path to the directory to list
+- `ignore`: Optional list of patterns to ignore
+
+**Environment output:**
+```xml
+<search_output>
+Directory listing with file names
 </search_output>
 ```
 
@@ -294,24 +308,37 @@ Operation results and current todo list (if view_all is true)
 </todo_output>
 ```
 
-#### 2. Scratchpad
+#### 2. Add Note
 Take notes during exploration for your own reference.
 
 ```xml
-<scratchpad>
-action: string
+<add_note>
 content: string
-</scratchpad>
+</add_note>
 ```
 
 **Field descriptions:**
-- `action`: Either "add_note" or "view_all_notes"
-- `content`: Note content (required for "add_note" action)
+- `content`: Note content to add
 
 **Environment output:**
 ```xml
 <scratchpad_output>
-Confirmation of note addition or list of all notes
+Confirmation of note addition
+</scratchpad_output>
+```
+
+#### 3. View All Notes
+View all previously added notes.
+
+```xml
+<view_all_notes>
+</view_all_notes>
+```
+
+**Environment output:**
+```xml
+<scratchpad_output>
+List of all notes
 </scratchpad_output>
 ```
 

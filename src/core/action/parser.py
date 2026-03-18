@@ -6,18 +6,13 @@ from typing import List, Tuple, Type, Optional
 
 import yaml
 
-from src.core.action.action_maps import ACTION_MAP, FILE_ACTIONS, SEARCH_ACTIONS
-from src.core.action.actions import (
-    Action,
-    AddNoteAction, ViewAllNotesAction,
-)
+from src.core.action.action_maps import ACTION_MAP
+from src.core.action.actions import Action
 
 
 class SimpleActionParser:
   """Clean parser that delegates validation to Pydantic models."""
 
-
-  # Tags to ignore (not actions)
   IGNORED_TAGS = {'think', 'reasoning', 'plan_md'}
 
   def __init__(self):
@@ -43,9 +38,7 @@ class SimpleActionParser:
     errors = []
     found_action_attempt = False
 
-    # Extract XML tags
     for tag_name, content in self._extract_xml_tags(response):
-      # Skip non-action tags
       if tag_name.lower() in self.IGNORED_TAGS:
         self.logger.debug(f"Skipping {tag_name} tag (not an action)")
         continue
@@ -54,19 +47,20 @@ class SimpleActionParser:
 
       try:
         data = yaml.safe_load(content.strip())
-        action_class, cleaned_data = self._get_action_class_and_data(tag_name, data)
+        action_class = ACTION_MAP.get(tag_name)
         if not action_class:
           errors.append(f"Unknown action type: {tag_name}")
           continue
 
-        # Let Pydantic validate and create the action
-        action = action_class.model_validate(cleaned_data)
+        if data is None:
+          data = {}
+
+        action = action_class.model_validate(data)
         actions.append(action)
 
       except yaml.YAMLError as e:
         errors.append(f"[{tag_name}] YAML error: {e}")
       except ValueError as e:
-        # Pydantic validation errors are more descriptive
         errors.append(f"[{tag_name}] Validation error: {e}")
       except Exception as e:
         errors.append(f"[{tag_name}] Unexpected error: {e}")
@@ -76,70 +70,25 @@ class SimpleActionParser:
   @staticmethod
   def _extract_xml_tags(response: str) -> List[Tuple[str, str]]:
     """Extract XML tag pairs from response."""
-    # Match top-level tags (not nested)
     pattern = r'(?:^|\n)\s*<(\w+)>([\s\S]*?)</\1>'
     matches = re.findall(pattern, response, re.MULTILINE)
     return matches
-
-  def _get_action_class_and_data(self, tag_name: str, data: dict) -> Tuple[Optional[Type[Action]], dict]:
-    """Get the appropriate Action class and cleaned data for a tag.
-
-    Returns:
-        Tuple of (action_class, cleaned_data)
-    """
-
-    # Direct mapping - no data cleaning needed
-    if tag_name in ACTION_MAP and ACTION_MAP[tag_name]:
-      return ACTION_MAP[tag_name], data
-
-    # Special handling for multi-action tags that use 'action' field
-    if tag_name == 'file':
-      action_type = data.get('action') if isinstance(data, dict) else None
-      action_class = FILE_ACTIONS.get(action_type)
-      if action_class and isinstance(data, dict):
-        # Remove 'action' field since Pydantic models don't expect it
-        cleaned_data = {k: v for k, v in data.items() if k != 'action'}
-        return action_class, cleaned_data
-      return None, data
-
-    elif tag_name == 'search':
-      action_type = data.get('action') if isinstance(data, dict) else None
-      action_class = SEARCH_ACTIONS.get(action_type)
-      if action_class and isinstance(data, dict):
-        # Remove 'action' field
-        cleaned_data = {k: v for k, v in data.items() if k != 'action'}
-        return action_class, cleaned_data
-      return None, data
-
-    elif tag_name == 'scratchpad':
-      action_type = data.get('action') if isinstance(data, dict) else None
-      if action_type == 'add_note':
-        # Only keep 'content' field
-        cleaned_data = {'content': data.get('content', '')}
-        return AddNoteAction, cleaned_data
-      elif action_type == 'view_all_notes':
-        return ViewAllNotesAction, {}
-      return None, data
-
-    return None, data
 
 
 # Example usage
 if __name__ == "__main__":
   parser = SimpleActionParser()
 
-  # Test various action formats
   test_response = """
 <bash>
 cmd: "ls -la"
 timeout_secs: 45
 </bash>
 
-<file>
-action: read
+<read_file>
 file_path: "/tmp/test.txt"
 limit: 100
-</file>
+</read_file>
 
 <todo>
 operations:
