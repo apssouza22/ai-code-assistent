@@ -12,11 +12,7 @@ from src.core.orchestrator.session_history import SessionHistory
 from src.core.orchestrator.turn import Turn
 from src.core.orchestrator.turn_history import TurnHistory
 from src.core.task import TaskManager, TaskStore
-from src.misc import setup_file_logging, pretty_log
-
-logger = logging.getLogger(__name__)
-setup_file_logging("ERROR")
-
+from src.misc import pretty_log
 
 class OrchestratorAgent(Agent):
   """Orchestrator agent coordinating tasks and subagents."""
@@ -40,7 +36,7 @@ class OrchestratorAgent(Agent):
         logging_dir=logging_dir,
         middlewares=middlewares,
     )
-    logger.info(f"OrchestratorAgent initialized with model={llm_config.model}, temperature={llm_config.temperature}")
+    pretty_log.info(f"OrchestratorAgent initialized with model={llm_config.model}, temperature={llm_config.temperature}")
     self.task_manager = task_manager
     self.task_store = task_store
     self.context_store = context_store

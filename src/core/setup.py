@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 from pathlib import Path
 from typing import Optional, List, Tuple
@@ -10,11 +9,11 @@ from terminal_bench.harness_models import FailureMode
 from terminal_bench.terminal.tmux_session import TmuxSession
 
 from src.core.agent import AgentTask
+from src.core.bash import DockerExecutor
 from src.core.llm import count_input_tokens, count_output_tokens
 from src.core.orchestrator.factory import create_orchestrator_agent
-from src.core.bash import DockerExecutor
+from src.misc import pretty_log
 
-logger = logging.getLogger(__name__)
 
 class AgentSetup(BaseAgent):
 
@@ -80,7 +79,7 @@ class AgentSetup(BaseAgent):
                         for task_id, trajectory_data in turn.subagent_trajectories.items():
                             subagent_input_tokens += trajectory_data.get('total_input_tokens', 0)
                             subagent_output_tokens += trajectory_data.get('total_output_tokens', 0)
-                            logger.info(f"Subagent {task_id} tokens - Input: {trajectory_data.get('total_input_tokens', 0)}, Output: {trajectory_data.get('total_output_tokens', 0)}")
+                            pretty_log.info(f"Subagent {task_id} tokens - Input: {trajectory_data.get('total_input_tokens', 0)}, Output: {trajectory_data.get('total_output_tokens', 0)}")
 
             orchestrator_input_tokens = count_input_tokens(self.orchestrator.messages, self.orchestrator.llm_config.model)
             orchestrator_output_tokens = count_output_tokens(self.orchestrator.messages, self.orchestrator.llm_config.model)
@@ -88,11 +87,11 @@ class AgentSetup(BaseAgent):
             total_output_tokens = subagent_output_tokens + orchestrator_output_tokens
             failure_mode = self._get_failure_mode(result)
 
-            logger.info(f"Orchestrator tokens - Input: {orchestrator_input_tokens}, Output: {orchestrator_output_tokens}")
-            logger.info(f"Total tokens (orchestrator + subagents) - Input: {total_input_tokens}, Output: {total_output_tokens}")
+            pretty_log.info(f"Orchestrator tokens - Input: {orchestrator_input_tokens}, Output: {orchestrator_output_tokens}")
+            pretty_log.info(f"Total tokens (orchestrator + subagents) - Input: {total_input_tokens}, Output: {total_output_tokens}")
 
         except Exception as e:
-            logger.exception(f"Error during orchestrator execution: {e}")
+            pretty_log.exception(f"Error during orchestrator execution: {e}")
             failure_mode = FailureMode.UNKNOWN_AGENT_ERROR
 
         # Save conversation log if logging directory provided
@@ -111,7 +110,7 @@ class AgentSetup(BaseAgent):
             with open(path / 'conversation_log.json', 'w') as f:
                 json.dump(data, f, indent=2)
 
-            logger.info(f"Conversation log exported to: {path / 'conversation_log.json'}")
+            pretty_log.info(f"Conversation log exported to: {path / 'conversation_log.json'}")
 
         return AgentResult(
             total_input_tokens=total_input_tokens,
