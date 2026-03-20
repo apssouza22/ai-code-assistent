@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Callable
 
 from src.core.action import ReportAction
-from src.core.common.middleware import Middleware, TurnContext
+from src.core.middleware import Middleware, TurnContext
 from src.core.agent.agent import AgentTask, Agent
 from src.core.agent.subagent_report import ContextItem, SubagentMeta, SubagentReport
 from src.core.llm import get_llm_response

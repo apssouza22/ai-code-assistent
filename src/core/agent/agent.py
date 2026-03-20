@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Any, Callable, Optional, List
 
-from src.core.common.middleware import Middleware, MiddlewarePipeline
+from src.core.middleware import Middleware, MiddlewarePipeline
 from src.core.action.action_handler import ActionHandler
 from src.core.action.actions_result import ExecutionResult
 from src.core.llm import count_input_tokens, count_output_tokens
@@ -45,7 +45,7 @@ class Agent:
 
         all_middlewares = list(middlewares or [])
         if self.turn_logger:
-            from src.core.common.middleware import TurnFileLoggingMiddleware
+            from src.core.middleware import TurnFileLoggingMiddleware
             all_middlewares.insert(0, TurnFileLoggingMiddleware(self.turn_logger))
 
         self.tool_handler = ActionHandler(

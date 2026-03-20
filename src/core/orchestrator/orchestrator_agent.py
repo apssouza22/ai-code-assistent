@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Callable
 
-from src.core.common.middleware import Middleware, TurnContext
+from src.core.middleware import Middleware, TurnContext
 from src.core.agent import Agent, AgentTask
 from src.core.context import ContextStore
 from src.core.llm import get_llm_response, LlmConfig

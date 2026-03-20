@@ -5,7 +5,7 @@ from src.core.action import TaskCreateAction
 from src.core.action.actions import LaunchSubagentAction, BatchTodoAction, AddNoteAction, ViewAllNotesAction, FinishAction, ReportAction, BashAction, GrepAction, GlobAction, LSAction, ReadAction, \
   WriteAction, WriteTempScriptAction, AddContextAction, MultiEditAction, FileMetadataAction, EditAction
 from src.core.action.handlers import FinishActionHandler, ReportActionHandler
-from src.core.common.middleware import (
+from src.core.middleware import (
     AuditLogMiddleware, OutputTruncationMiddleware, PermissionMiddleware, TimingMiddleware,
     TurnLoggingMiddleware, TokenBudgetMiddleware, ErrorRecoveryMiddleware,
 )
