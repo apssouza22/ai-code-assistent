@@ -112,18 +112,20 @@ class OrchestratorAgent(Agent):
     }
 
   def _get_llm_response(self, user_message: str) -> str:
-    response = get_llm_response(
-        messages=[
-          {"role": "system", "content": self.system_message},
-          {"role": "user", "content": user_message}
-        ],
-        llm_config=self.llm_config,
-        api_base=self.api_base
+    call_messages = [
+        {"role": "system", "content": self.system_message},
+        {"role": "user", "content": user_message},
+    ]
+
+    model_ctx = self.pipeline.execute_model_call(
+        messages=call_messages,
+        model_fn=lambda msgs: get_llm_response(messages=msgs, llm_config=self.llm_config, api_base=self.api_base),
+        agent_name=self.agent_name,
     )
 
     self.messages.append({"role": "user", "content": user_message})
-    self.messages.append({"role": "assistant", "content": response})
-    return response
+    self.messages.append({"role": "assistant", "content": model_ctx.response})
+    return model_ctx.response
 
   def run_task(self, task: AgentTask, max_turns: Optional[int] = None) -> Dict[str, Any]:
     turns_executed = 0

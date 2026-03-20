@@ -3,8 +3,10 @@
 from src.core.middleware.base import (
     Middleware,
     TurnContext,
+    ModelCallContext,
     ActionCallContext,
     ActionCall,
+    ModelCall,
 )
 from src.core.middleware.pipeline import MiddlewarePipeline
 from src.core.middleware.permission import PermissionMiddleware
@@ -19,8 +21,10 @@ from src.core.middleware.turn_file_logging import TurnFileLoggingMiddleware
 __all__ = [
     "Middleware",
     "TurnContext",
+    "ModelCallContext",
     "ActionCallContext",
     "ActionCall",
+    "ModelCall",
     "MiddlewarePipeline",
     "PermissionMiddleware",
     "OutputTruncationMiddleware",

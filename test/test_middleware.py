@@ -8,6 +8,7 @@ from src.core.middleware import (
     Middleware,
     MiddlewarePipeline,
     TurnContext,
+    ModelCallContext,
     PermissionMiddleware,
     OutputTruncationMiddleware,
     TimingMiddleware,
@@ -59,6 +60,14 @@ def _identity_core(ctx: TurnContext) -> TurnContext:
 
 def _failing_core(ctx: TurnContext) -> TurnContext:
     raise RuntimeError("boom")
+
+
+def _echo_model(messages):
+    """Simulates an LLM call by echoing the last user message."""
+    for msg in reversed(messages):
+        if msg.get("role") == "user":
+            return f"echo: {msg['content']}"
+    return "echo: (no user message)"
 
 
 # ===================================================================
@@ -586,12 +595,165 @@ class TestTurnFileLoggingMiddleware:
 
 
 # ===================================================================
-# Cross-cutting: single middleware handling both turn and action events
+# Model-call-level middleware tests
+# ===================================================================
+
+class TestModelCallPipeline:
+
+    def test_empty_pipeline_calls_model_directly(self):
+        pipeline = MiddlewarePipeline([])
+        messages = [{"role": "user", "content": "hello"}]
+        ctx = pipeline.execute_model_call(messages, _echo_model)
+        assert ctx.response == "echo: hello"
+
+    def test_single_middleware_wraps_model_call(self):
+        calls = []
+
+        class TrackerMW(Middleware):
+            def before_model_call(self, ctx):
+                calls.append("before")
+                return ctx
+            def after_model_call(self, ctx):
+                calls.append("after")
+                return ctx
+
+        pipeline = MiddlewarePipeline([TrackerMW()])
+        messages = [{"role": "user", "content": "hi"}]
+        pipeline.execute_model_call(messages, _echo_model)
+        assert calls == ["before", "after"]
+
+    def test_middleware_ordering_is_outermost_first(self):
+        order = []
+
+        class MW(Middleware):
+            def __init__(self, name):
+                self._name = name
+            def before_model_call(self, ctx):
+                order.append(f"{self._name}_pre")
+                return ctx
+            def after_model_call(self, ctx):
+                order.append(f"{self._name}_post")
+                return ctx
+
+        pipeline = MiddlewarePipeline([MW("A"), MW("B"), MW("C")])
+        pipeline.execute_model_call([{"role": "user", "content": "x"}], _echo_model)
+        assert order == ["A_pre", "B_pre", "C_pre", "C_post", "B_post", "A_post"]
+
+    def test_middleware_can_short_circuit_with_cached_response(self):
+        class CacheMW(Middleware):
+            def before_model_call(self, ctx):
+                ctx.response = "cached answer"
+                ctx.skipped = True
+                return ctx
+
+        pipeline = MiddlewarePipeline([CacheMW()])
+        model_called = []
+
+        def tracking_model(messages):
+            model_called.append(True)
+            return "real answer"
+
+        ctx = pipeline.execute_model_call(
+            [{"role": "user", "content": "hi"}], tracking_model
+        )
+        assert ctx.response == "cached answer"
+        assert ctx.skipped is True
+        assert not model_called
+
+    def test_before_can_modify_messages(self):
+        class InjectSystemMW(Middleware):
+            def before_model_call(self, ctx):
+                ctx.messages.insert(0, {"role": "system", "content": "Be helpful."})
+                return ctx
+
+        pipeline = MiddlewarePipeline([InjectSystemMW()])
+        ctx = pipeline.execute_model_call(
+            [{"role": "user", "content": "hi"}], _echo_model
+        )
+        assert len(ctx.messages) == 2
+        assert ctx.messages[0]["role"] == "system"
+        assert ctx.response == "echo: hi"
+
+    def test_after_can_modify_response(self):
+        class SuffixMW(Middleware):
+            def after_model_call(self, ctx):
+                ctx.response = ctx.response + " [reviewed]"
+                return ctx
+
+        pipeline = MiddlewarePipeline([SuffixMW()])
+        ctx = pipeline.execute_model_call(
+            [{"role": "user", "content": "hi"}], _echo_model
+        )
+        assert ctx.response == "echo: hi [reviewed]"
+
+    def test_agent_name_passed_through(self):
+        captured = {}
+
+        class CaptureMW(Middleware):
+            def before_model_call(self, ctx):
+                captured["agent"] = ctx.agent_name
+                return ctx
+
+        pipeline = MiddlewarePipeline([CaptureMW()])
+        pipeline.execute_model_call(
+            [{"role": "user", "content": "x"}], _echo_model, agent_name="coder"
+        )
+        assert captured["agent"] == "coder"
+
+    def test_metadata_shared_between_before_and_after(self):
+        class TimerMW(Middleware):
+            def before_model_call(self, ctx):
+                ctx.metadata["started"] = True
+                return ctx
+            def after_model_call(self, ctx):
+                assert ctx.metadata["started"] is True
+                ctx.metadata["finished"] = True
+                return ctx
+
+        pipeline = MiddlewarePipeline([TimerMW()])
+        ctx = pipeline.execute_model_call(
+            [{"role": "user", "content": "x"}], _echo_model
+        )
+        assert ctx.metadata == {"started": True, "finished": True}
+
+    def test_short_circuit_unwinds_only_called_middlewares(self):
+        calls = []
+
+        class TrackMW(Middleware):
+            def __init__(self, name):
+                self._name = name
+            def before_model_call(self, ctx):
+                calls.append(f"{self._name}_before")
+                return ctx
+            def after_model_call(self, ctx):
+                calls.append(f"{self._name}_after")
+                return ctx
+
+        class BlockMW(Middleware):
+            def before_model_call(self, ctx):
+                calls.append("block_before")
+                ctx.response = "blocked"
+                ctx.skipped = True
+                return ctx
+            def after_model_call(self, ctx):
+                calls.append("block_after")
+                return ctx
+
+        pipeline = MiddlewarePipeline([TrackMW("A"), BlockMW(), TrackMW("C")])
+        ctx = pipeline.execute_model_call(
+            [{"role": "user", "content": "x"}], _echo_model
+        )
+        assert ctx.response == "blocked"
+        assert calls == ["A_before", "block_before", "A_after"]
+
+
+# ===================================================================
+# Cross-cutting: single middleware handling turn, model-call, and action events
 # ===================================================================
 
 class TestUnifiedMiddleware:
 
-    def test_single_middleware_handles_both_turn_and_action_events(self):
+    def test_single_middleware_handles_turn_model_and_action_events(self):
         events = []
 
         class FullLifecycleMiddleware(Middleware):
@@ -600,6 +762,12 @@ class TestUnifiedMiddleware:
                 return ctx
             def after_turn(self, ctx):
                 events.append("after_turn")
+                return ctx
+            def before_model_call(self, ctx):
+                events.append("before_model_call")
+                return ctx
+            def after_model_call(self, ctx):
+                events.append("after_model_call")
                 return ctx
             def before_action_call(self, ctx):
                 events.append("before_action_call")
@@ -615,6 +783,12 @@ class TestUnifiedMiddleware:
         assert events == ["before_turn", "after_turn"]
 
         events.clear()
+        pipeline.execute_model_call(
+            [{"role": "user", "content": "hi"}], _echo_model
+        )
+        assert events == ["before_model_call", "after_model_call"]
+
+        events.clear()
         pipeline.execute_action(BashAction(cmd="ls"), _ok_handler)
         assert events == ["before_action_call", "after_action_call"]
 
@@ -623,6 +797,11 @@ class TestUnifiedMiddleware:
 
         ctx = pipeline.execute_turn(_make_ctx(), _identity_core)
         assert ctx.result is not None
+
+        model_ctx = pipeline.execute_model_call(
+            [{"role": "user", "content": "hi"}], _echo_model
+        )
+        assert model_ctx.response == "echo: hi"
 
         output, is_error = pipeline.execute_action(BashAction(cmd="ls"), _ok_handler)
         assert "BashAction" in output

@@ -75,11 +75,12 @@ class Subagent(Agent):
 
     def _get_llm_response(self, messages: List[Dict[str, str]]) -> str:
         """Get response from LLM using centralized client."""
-        return get_llm_response(
+        model_ctx = self.pipeline.execute_model_call(
             messages=messages,
-            llm_config=self.llm_config,
-            api_base=self.api_base
+            model_fn=lambda msgs: get_llm_response(messages=msgs, llm_config=self.llm_config, api_base=self.api_base),
+            agent_name=self.agent_name,
         )
+        return model_ctx.response
 
     def _check_for_report(self, actions: List) -> Optional[SubagentReport]:
         """Check if any action is a ReportAction and convert to SubagentReport."""
