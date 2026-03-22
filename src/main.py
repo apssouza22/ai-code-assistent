@@ -7,6 +7,9 @@ from asyncio import all_tasks
 
 from src.core.action import TaskCreateAction
 from src.core.action.action_handler import ActionHandler
+from src.core.action.actions import AddContextAction
+from src.core.context import ContextStore
+from src.core.context.context_handler import AddContextActionHandler
 from src.core.llm import get_llm_response, LlmConfig
 from src.core.task import create_task_manager, TaskStore
 from src.core.task.create_task_handler import CreateTaskActionHandler
@@ -57,12 +60,16 @@ def initialize_orchestrator_and_run_task():
         ],
         llm_config,
     )
-    task_manager = create_task_manager()
-    agent_launcher = AgentLauncher(task_manager)
+    context_store = ContextStore()
+    task_manager = create_task_manager(TaskStore(), context_store)
+    agent_launcher = AgentLauncher(task_manager, context_store)
     create_task_handler = CreateTaskActionHandler(task_manager, agent_launcher)
-
+    context_add_handler = AddContextActionHandler(context_store)
     action_handler = ActionHandler(
-        actions={TaskCreateAction: create_task_handler.handle},
+        actions={
+            TaskCreateAction: create_task_handler.handle,
+            AddContextAction: context_add_handler
+        },
         agent_name="EXPLORER_AGENT"
     )
     actions, env_responses, has_error = action_handler.get_tools(response)
