@@ -3,9 +3,16 @@
 import os
 import sys
 import traceback
+from asyncio import all_tasks
 
+from src.core.action import TaskCreateAction
+from src.core.action.action_handler import ActionHandler
 from src.core.llm import get_llm_response, LlmConfig
+from src.core.task import create_task_manager, TaskStore
+from src.core.task.create_task_handler import CreateTaskActionHandler
+from src.core.task.subagent_luncher import AgentLauncher
 from src.misc import pretty_log, PrettyLogger
+from src.system_msgs.system_msg_loader import load_orchestrator_system_message, load_explorer_system_message
 
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -23,6 +30,13 @@ Automatically choose to install any dependencies if it is required to develop th
 """
 )
 
+subagent_instruction = (
+    """Explore the project root and list:
+  1. Any files or directories that indicate the programming language, server framework, or dependency management system (e.g., package.json, requirements.txt, pipfile, go.mod, etc.).
+  2. For each, add a 1-2 sentence explanation describing what the file is used for and what language or framework it suggests.
+  This should enable identification of the appropriate implementation approach for a simple HTTP server.
+""")
+
 def initialize_orchestrator_and_run_task():
     """Initialize the orchestrator agent and run the task."""
 
@@ -35,11 +49,29 @@ def initialize_orchestrator_and_run_task():
         temperature=1,
         max_tokens=2000,
     )
+    orchestrator_system_prompt = load_orchestrator_system_message()
     response = get_llm_response(
-        [{"role": "user", "content": task_instruction}],
+        [
+            {"role": "system", "content": orchestrator_system_prompt},
+            {"role": "user", "content": subagent_instruction}
+        ],
         llm_config,
     )
-    pretty_log.info(response)
+    task_manager = create_task_manager()
+    agent_launcher = AgentLauncher(task_manager)
+    create_task_handler = CreateTaskActionHandler(task_manager, agent_launcher)
+
+    action_handler = ActionHandler(
+        actions={TaskCreateAction: create_task_handler.handle},
+        agent_name="EXPLORER_AGENT"
+    )
+    actions, env_responses, has_error = action_handler.get_tools(response)
+    action_results = action_handler.execute_tool_call(actions[0])
+
+    pretty_log.info(f"LLM response: {response}")
+    pretty_log.info(f"Actions: {actions}")
+    pretty_log.info(f"Action results: {action_results}")
+
     return "SUCCESS"
 
 def main():
