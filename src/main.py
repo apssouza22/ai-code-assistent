@@ -27,8 +27,11 @@ def initialize_orchestrator_and_run_task():
     """Initialize the orchestrator agent and run the task."""
 
     pretty_log.section_header("Initializing Code Assistant")
+
+    # ("anthropic/claude-sonnet-4-20250514", 0.1),
+    # ("openrouter/qwen/qwen3-coder", 0.1),
     llm_config = LlmConfig(
-        model="gpt-4o",
+        model="openai/gpt-4.1-2025-04-14",
         temperature=1,
         max_tokens=2000,
     )
