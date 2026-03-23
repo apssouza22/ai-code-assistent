@@ -3,11 +3,11 @@
 import os
 import sys
 import traceback
-from asyncio import all_tasks
 
 from src.core.action import TaskCreateAction
 from src.core.action.action_handler import ActionHandler
 from src.core.action.actions import AddContextAction
+from src.core.agent import Subagent
 from src.core.context import ContextStore
 from src.core.context.context_handler import AddContextActionHandler
 from src.core.llm import get_llm_response, LlmConfig
@@ -15,7 +15,7 @@ from src.core.task import create_task_manager, TaskStore
 from src.core.task.create_task_handler import CreateTaskActionHandler
 from src.core.task.subagent_luncher import AgentLauncher
 from src.misc import pretty_log, PrettyLogger
-from src.system_msgs.system_msg_loader import load_orchestrator_system_message, load_explorer_system_message
+from src.system_msgs.system_msg_loader import load_orchestrator_system_message, load_explorer_system_message, load_coder_system_message
 
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -60,9 +60,24 @@ def initialize_orchestrator_and_run_task():
         ],
         llm_config,
     )
+
+    subagents = {
+        "explorer": Subagent(
+            agent_name="explorer",
+            system_prompt=load_explorer_system_message(),
+            actions={},
+            llm_config=llm_config,
+        ),
+        "coder": Subagent(
+            agent_name="coder",
+            system_prompt=load_coder_system_message(),
+            actions={},
+            llm_config=llm_config,
+        )
+    }
     context_store = ContextStore()
     task_manager = create_task_manager(TaskStore(), context_store)
-    agent_launcher = AgentLauncher(task_manager, context_store)
+    agent_launcher = AgentLauncher(task_manager, context_store, subagents)
     create_task_handler = CreateTaskActionHandler(task_manager, agent_launcher)
     context_add_handler = AddContextActionHandler(context_store)
     action_handler = ActionHandler(
@@ -75,7 +90,7 @@ def initialize_orchestrator_and_run_task():
     actions, env_responses, has_error = action_handler.get_tools(response)
     action_results = action_handler.execute_tool_call(actions[0])
 
-    pretty_log.info(f"LLM response: {response}")
+    pretty_log.debug(f"LLM response: {response}")
     pretty_log.info(f"Actions: {actions}")
     pretty_log.info(f"Action results: {action_results}")
 

@@ -6,7 +6,7 @@ from typing import (
 from src.core.action import TaskCreateAction
 from src.core.context import ContextStore, Context
 
-from src.core.task.subagent_report import SubagentReport
+from src.core.agent.subagent_report import SubagentReport
 from src.core.task.task import Task, TaskStatus
 from src.core.task.task_store import TaskStore
 from src.misc import pretty_log

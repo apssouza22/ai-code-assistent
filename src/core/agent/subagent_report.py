@@ -12,7 +12,7 @@ class ContextItem:
 
 
 @dataclass
-class SubagentMeta:
+class ReportMetadata:
     """Metadata for subagent execution."""
     trajectory: Optional[List[Dict[str, Any]]] = None
     num_turns: Optional[int] = None
@@ -20,16 +20,16 @@ class SubagentMeta:
     total_output_tokens: int = 0
 
 
-@dataclass 
+@dataclass
 class SubagentReport:
     """Structured report from a subagent."""
     contexts: List[ContextItem]
     comments: str
-    meta: Optional[SubagentMeta] = None
-    
+    meta: Optional[ReportMetadata] = None
+
     def to_dict(self):
         """Convert to dictionary format expected by orchestrator hub."""
-        result = {
+        result: Dict[str, Any] = {
             "contexts": [
                 {"id": ctx.id, "content": ctx.content}
                 for ctx in self.contexts
@@ -39,8 +39,6 @@ class SubagentReport:
         if self.meta:
             result["meta"] = {
                 "trajectory": self.meta.trajectory,
-                "num_turns": self.meta.num_turns,
-                "total_input_tokens": self.meta.total_input_tokens,
-                "total_output_tokens": self.meta.total_output_tokens
+                "num_turns": self.meta.num_turns
             }
         return result

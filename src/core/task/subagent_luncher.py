@@ -1,10 +1,9 @@
 from typing import Dict, List, Tuple
 
-
+from src.core.agent import SubagentTask, Subagent
 from src.core.common.utils import format_tool_output
 from src.core.context import ContextStore
 from src.core.task import Task, TaskManager
-from src.core.task.subagent_report import SubagentReport
 from src.misc import pretty_log
 
 
@@ -13,7 +12,9 @@ class AgentLauncher:
         self,
         task_manager: TaskManager,
         context_store: ContextStore,
+        agents: dict[str, Subagent]
     ):
+        self.agents = agents
         self.context_store = context_store
         self.task_manager = task_manager
 
@@ -24,21 +25,37 @@ class AgentLauncher:
             pretty_log.error(error_msg, "ORCHESTRATOR")
             return format_tool_output("subagent", error_msg), True
 
-        bootstrap_ctx, task_context = self._build_context(task)
-        # Lunch the subagent here (this is a placeholder, actual implementation would depend on how subagents are defined and executed)
-        subagent_result = SubagentReport(
-            contexts=[],
-            comments="Subagent executed successfully",
-        )
+        agent: Subagent = self.agents.get(task.agent_name)
+        if not agent:
+            error_msg = f"[ERROR] Agent {task.agent_name} not found"
+            pretty_log.error(error_msg, "ORCHESTRATOR")
+            return format_tool_output("subagent", error_msg), True
+
+        agent_task = self._get_agent_task(task)
+        subagent_result = agent.run_task(agent_task)
+
         result = self.task_manager.process_task_result(task, subagent_result)
         response_lines = [
             f"Subagent completed task {task_id}",
             f"Contexts stored: {', '.join(result['context_ids_stored'])}",
         ]
+
         if result["comments"]:
             response_lines.append(f"Comments: {result['comments']}")
+
         return format_tool_output("subagent", "\n".join(response_lines)), False
 
+    def _get_agent_task(self, task: Task) -> SubagentTask:
+        bootstrap_ctx, task_context = self._build_context(task)
+        return SubagentTask(
+            agent_name=task.agent_name,
+            instruction=task.description,
+            title=task.title,
+            task_id=task.task_id,
+            task_context=task_context,
+            relevant_files=bootstrap_ctx,
+            description=None
+        )
 
     def _build_context(self, task: Task) -> Tuple[list, dict]:
         task_context = self._get_context_by_ids(task.context_refs)
