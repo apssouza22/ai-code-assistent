@@ -14,7 +14,7 @@ class ExecutionResult:
     task_trajectories: Optional[Dict[str, Dict[str, Any]]] = None
 
     def to_dict(self) -> dict:
-        result = {
+        result: Dict[str, Any] = {
             "actions_executed": [a.to_dict() for a in self.actions_executed],
             "env_responses": self.env_responses,
             "has_error": self.has_error,

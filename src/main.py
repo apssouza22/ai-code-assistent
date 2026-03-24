@@ -7,10 +7,11 @@ import traceback
 from src.core.action import TaskCreateAction
 from src.core.action.action_handler import ActionHandler
 from src.core.action.actions import AddContextAction
-from src.core.agent import Subagent
+from src.core.agent import Subagent, AgentTask
 from src.core.context import ContextStore
 from src.core.context.context_handler import AddContextActionHandler
 from src.core.llm import get_llm_response, LlmConfig
+from src.core.orchestrator.orchestrator_agent import OrchestratorAgent
 from src.core.task import create_task_manager, TaskStore
 from src.core.task.create_task_handler import CreateTaskActionHandler
 from src.core.task.subagent_luncher import AgentLauncher
@@ -19,7 +20,6 @@ from src.system_msgs.system_msg_loader import load_orchestrator_system_message, 
 
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 
 task_instruction = (
     """Create and run a server on port 3000 that has a single GET endpoint: /fib.
@@ -40,6 +40,7 @@ subagent_instruction = (
   This should enable identification of the appropriate implementation approach for a simple HTTP server.
 """)
 
+
 def initialize_orchestrator_and_run_task():
     """Initialize the orchestrator agent and run the task."""
 
@@ -52,15 +53,6 @@ def initialize_orchestrator_and_run_task():
         temperature=1,
         max_tokens=2000,
     )
-    orchestrator_system_prompt = load_orchestrator_system_message()
-    response = get_llm_response(
-        [
-            {"role": "system", "content": orchestrator_system_prompt},
-            {"role": "user", "content": subagent_instruction}
-        ],
-        llm_config,
-    )
-
     subagents = {
         "explorer": Subagent(
             agent_name="explorer",
@@ -76,25 +68,31 @@ def initialize_orchestrator_and_run_task():
         )
     }
     context_store = ContextStore()
-    task_manager = create_task_manager(TaskStore(), context_store)
+    task_store = TaskStore()
+    task_manager = create_task_manager(task_store, context_store)
     agent_launcher = AgentLauncher(task_manager, context_store, subagents)
     create_task_handler = CreateTaskActionHandler(task_manager, agent_launcher)
-    context_add_handler = AddContextActionHandler(context_store)
-    action_handler = ActionHandler(
-        actions={
-            TaskCreateAction: create_task_handler.handle,
-            AddContextAction: context_add_handler
-        },
-        agent_name="EXPLORER_AGENT"
-    )
-    actions, env_responses, has_error = action_handler.get_tools(response)
-    action_results = action_handler.execute_tool_call(actions[0])
 
-    pretty_log.debug(f"LLM response: {response}")
-    pretty_log.info(f"Actions: {actions}")
-    pretty_log.info(f"Action results: {action_results}")
+    actions = {
+        TaskCreateAction: create_task_handler.handle,
+    }
+    orchestrator_agent = OrchestratorAgent(
+        load_orchestrator_system_message(),
+        task_store,
+        context_store,
+        task_manager,
+        actions,
+        llm_config,
+    )
+    result =orchestrator_agent.run_task(AgentTask(
+        task_id="",
+        instruction=task_instruction,
+        agent_name="orchestrator",
+    ), max_turns=1)
+    pretty_log.info(f"task result: {result}")
 
     return "SUCCESS"
+
 
 def main():
     if not os.getenv("LITE_LLM_API_KEY") and not os.getenv("LITELLM_API_KEY"):
@@ -113,6 +111,7 @@ def main():
         pretty_log.info(f"{test_name}: {status}")
         if status == "FAILED":
             pretty_log.info(f"Details: {details}")
+
 
 PrettyLogger.PRINT_DEBUG = True
 if __name__ == "__main__":

@@ -128,7 +128,6 @@ def get_llm_response(
                 reasoning_effort="low" if is_reasoning_model else None,
                 **token_params
             )
-            pretty_log.debug(f"OpenAI call took {time.time()-start:.2f}s with model {model} (attempt {attempt + 1})")
             return response.choices[0].message.content # type: ignore
 
         except InternalServerError as e:
