@@ -7,7 +7,7 @@ from src.core.action.actions import Action
 @dataclass
 class ExecutionResult:
     actions_executed: List[Action]
-    env_responses: List[str]
+    actions_outputs: List[str]
     has_error: bool
     finish_message: Optional[str] = None
     done: bool = False
@@ -16,7 +16,7 @@ class ExecutionResult:
     def to_dict(self) -> dict:
         result: Dict[str, Any] = {
             "actions_executed": [a.to_dict() for a in self.actions_executed],
-            "env_responses": self.env_responses,
+            "env_responses": self.actions_outputs,
             "has_error": self.has_error,
             "finish_message": self.finish_message,
             "done": self.done,

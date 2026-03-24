@@ -48,12 +48,11 @@ class OrchestratorAgent(Agent):
         """
         agent_prompt = f"## Current Task\n{ctx.user_message}\n\n{self.session_history.to_prompt()}"
         llm_response = self._get_llm_response(agent_prompt)
-        pretty_log.debug(f"LLM response: {llm_response}", self.agent_name)
         result = self.handle_llm_response(llm_response)
         turn = Turn(
             llm_output=llm_response,
             actions_executed=result.actions_executed,
-            action_outputs=result.env_responses,
+            action_outputs=result.actions_outputs,
             task_trajectories=result.task_trajectories
         )
         self.turn_history.add_turn(turn)
@@ -91,7 +90,7 @@ class OrchestratorAgent(Agent):
         while not self.session_history.done and turns_executed < max_turns:
             turns_executed += 1
             ctx = self._handle_turn(task.instruction, turns_executed, max_turns)
-            pretty_log.debug(f"Action output: {ctx.result.env_responses}", "ORCHESTRATOR")
+            pretty_log.debug(f"Action output: {ctx.result.actions_outputs}", "ORCHESTRATOR")
             if ctx.aborted:
                 pretty_log.warning(f"Turn aborted: {ctx.abort_reason}", "ORCHESTRATOR")
                 break

@@ -7,6 +7,7 @@ from src.core.agent.agent import AgentTask, Agent
 from src.core.agent.subagent_report import SubagentReport
 from src.core.llm import get_llm_response
 from src.core.llm.llm_config import LlmConfig
+from src.misc import pretty_log
 
 
 @dataclass
@@ -65,9 +66,12 @@ class Subagent(Agent):
             {"role": "system", "content": self.system_message},
             {"role": "user", "content": self._build_task_prompt(task)}
         ]
-        response = get_llm_response(messages=self.messages, llm_config=self.llm_config)
+        llm_response = get_llm_response(messages=self.messages, llm_config=self.llm_config)
 
+        result = self.handle_llm_response(llm_response)
+        str_result = "\n".join(result.actions_outputs)
+        pretty_log.info(f"Subagent result: {str_result}", self.agent_name)
         # TODO: implement the action execution loop here
 
-        return SubagentReport([], response, None)
+        return SubagentReport([], str_result)
 

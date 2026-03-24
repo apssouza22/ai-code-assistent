@@ -49,7 +49,7 @@ class Agent:
         if not actions:
             return ExecutionResult(
                 actions_executed=[],
-                env_responses=env_responses,
+                actions_outputs=env_responses,
                 has_error=True,
                 done=False
             )
@@ -82,7 +82,7 @@ class Agent:
 
         return ExecutionResult(
             actions_executed=actions_executed,
-            env_responses=exec_outputs,
+            actions_outputs=exec_outputs,
             has_error=has_error,
             finish_message=finish_message,
             done=done,

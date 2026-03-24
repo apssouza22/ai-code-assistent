@@ -27,7 +27,6 @@ class TaskManager:
 
     def create_task(self, action: TaskCreateAction) -> Task:
         """Create a task and optionally launch the matching subagent."""
-        pretty_log.info(f"Creating task: {action.title}")
         return self.task_store.create_task(
             agent_name=action.agent_name,
             title=action.title,

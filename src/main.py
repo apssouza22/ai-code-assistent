@@ -8,10 +8,12 @@ from src.core.action import TaskCreateAction
 from src.core.action.action_handler import ActionHandler
 from src.core.action.actions import AddContextAction
 from src.core.agent import Subagent, AgentTask
+from src.core.backend.command_env_executor import get_docker_executor
 from src.core.context import ContextStore
 from src.core.context.context_handler import AddContextActionHandler
 from src.core.llm import get_llm_response, LlmConfig
 from src.core.orchestrator.orchestrator_agent import OrchestratorAgent
+from src.core.bash.factory import get_bash_handlers
 from src.core.task import create_task_manager, TaskStore
 from src.core.task.create_task_handler import CreateTaskActionHandler
 from src.core.task.subagent_luncher import AgentLauncher
@@ -53,20 +55,7 @@ def initialize_orchestrator_and_run_task():
         temperature=1,
         max_tokens=2000,
     )
-    subagents = {
-        "explorer": Subagent(
-            agent_name="explorer",
-            system_prompt=load_explorer_system_message(),
-            actions={},
-            llm_config=llm_config,
-        ),
-        "coder": Subagent(
-            agent_name="coder",
-            system_prompt=load_coder_system_message(),
-            actions={},
-            llm_config=llm_config,
-        )
-    }
+    subagents = get_subagents(llm_config)
     context_store = ContextStore()
     task_store = TaskStore()
     task_manager = create_task_manager(task_store, context_store)
@@ -92,6 +81,25 @@ def initialize_orchestrator_and_run_task():
     pretty_log.info(f"task result: {result}")
 
     return "SUCCESS"
+
+
+def get_subagents(llm_config: LlmConfig) -> dict[str, Subagent]:
+    bash_actions = get_bash_handlers(get_docker_executor())
+    subagents = {
+        "explorer": Subagent(
+            agent_name="explorer",
+            system_prompt=load_explorer_system_message(),
+            actions=bash_actions,
+            llm_config=llm_config,
+        ),
+        "coder": Subagent(
+            agent_name="coder",
+            system_prompt=load_coder_system_message(),
+            actions=bash_actions,
+            llm_config=llm_config,
+        )
+    }
+    return subagents
 
 
 def main():

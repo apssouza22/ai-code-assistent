@@ -62,7 +62,7 @@ class ActionHandler:
 
         return ExecutionResult(
             actions_executed=actions_executed,
-            env_responses=env_responses,
+            actions_outputs=env_responses,
             has_error=has_error,
             finish_message=finish_message,
             done=done,
