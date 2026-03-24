@@ -42,14 +42,3 @@ class Turn:
         return "\n".join(parts)
 
 
-@dataclass
-class TurnContext:
-    agent_name: str
-    turn_num: int
-    max_turns: int
-    user_message: str
-    messages: List[Dict[str, str]]
-    aborted: bool = False
-    turn: Optional[Turn] = None
-    result: Optional[ExecutionResult] = None
-    abort_reason: Optional[str] = None

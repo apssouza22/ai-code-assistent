@@ -3,10 +3,11 @@
 from typing import Any, Dict, Optional, Callable
 
 from src.core.agent import Agent, AgentTask
+from src.core.agent.agent import TurnContext
 from src.core.context import ContextStore
 from src.core.llm import LlmConfig, get_llm_response
 from src.core.orchestrator.session_history import SessionHistory
-from src.core.orchestrator.turn import Turn, TurnContext
+from src.core.orchestrator.turn import Turn
 from src.core.orchestrator.turn_history import TurnHistory
 from src.core.task import TaskManager, TaskStore
 from src.misc import pretty_log
@@ -41,12 +42,16 @@ class OrchestratorAgent(Agent):
             turn_history=self.turn_history
         )
 
-    def _run_turn(self, ctx: TurnContext) -> TurnContext:
-        """Core turn logic: LLM call, action execution, state update.
-
-        This is the innermost function wrapped by the middleware pipeline.
-        """
-        agent_prompt = f"## Current Task\n{ctx.user_message}\n\n{self.session_history.to_prompt()}"
+    def _handle_turn(self, instruction: str, turn_num: int, max_turns: int) -> TurnContext:
+        ctx = TurnContext(
+            agent_name=self.agent_name,
+            turn_num=turn_num,
+            max_turns=max_turns,
+            messages=self.messages,
+            prompt=instruction,
+        )
+        pretty_log.info(f"Running turn {ctx.turn_num} of {ctx.max_turns}", "ORCHESTRATOR")
+        agent_prompt = f"## Current Task\n{ctx.prompt}\n\n{self.session_history.to_prompt()}"
         llm_response = self._get_llm_response(agent_prompt)
         result = self.handle_llm_response(llm_response)
         turn = Turn(
@@ -58,19 +63,7 @@ class OrchestratorAgent(Agent):
         self.turn_history.add_turn(turn)
         self.session_history.done = result.done
         self.session_history.finish_message = result.finish_message
-        ctx.turn = turn
         ctx.result = result
-        return ctx
-
-    def _handle_turn(self, instruction: str, turn_num: int, max_turns: int) -> TurnContext:
-        ctx = TurnContext(
-            agent_name=self.agent_name,
-            turn_num=turn_num,
-            max_turns=max_turns,
-            messages=self.messages,
-            user_message=instruction,
-        )
-        self._run_turn(ctx)
         return ctx
 
 

@@ -4,6 +4,7 @@ from typing import Dict, Any, Callable, Optional, List
 
 from src.core.action import Action, FinishAction
 from src.core.action.action_handler import ActionHandler
+from src.core.action.actions import BashAction
 from src.core.action.actions_result import ExecutionResult
 from src.core.llm.llm_config import LlmConfig
 from src.misc import pretty_log
@@ -16,6 +17,18 @@ class AgentTask:
     instruction: str
     agent_name: str
 
+
+@dataclass
+class TurnContext:
+    agent_name: str
+    turn_num: int
+    max_turns: int
+    prompt: str
+    messages: List[Dict[str, str]]
+    aborted: bool = False
+    result: Optional[ExecutionResult] = None
+    abort_reason: Optional[str] = None,
+    metadata: Dict[str, Any] = Dict[str, Any]
 
 class Agent:
     """Base Agent class."""
@@ -65,6 +78,8 @@ class Agent:
 
         for tool in tools:
             try:
+                if isinstance(tool, BashAction):
+                    pretty_log.debug(f"Executing bash command: {tool.cmd}", self.agent_name.upper())
                 output, action_error = self.tool_handler.execute_tool_call(tool)
                 actions_executed.append(tool)
                 exec_outputs.append(output)

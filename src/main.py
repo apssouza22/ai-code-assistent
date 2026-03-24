@@ -5,15 +5,15 @@ import sys
 import traceback
 
 from src.core.action import TaskCreateAction
-from src.core.action.action_handler import ActionHandler
-from src.core.action.actions import AddContextAction
+from src.core.action.actions import ReportAction
+from src.core.action.handlers import ReportActionHandler
 from src.core.agent import Subagent, AgentTask
 from src.core.backend.command_env_executor import get_docker_executor
-from src.core.context import ContextStore
-from src.core.context.context_handler import AddContextActionHandler
-from src.core.llm import get_llm_response, LlmConfig
-from src.core.orchestrator.orchestrator_agent import OrchestratorAgent
 from src.core.bash.factory import get_bash_handlers
+from src.core.context import ContextStore
+from src.core.file import get_file_handlers
+from src.core.llm import LlmConfig
+from src.core.orchestrator.orchestrator_agent import OrchestratorAgent
 from src.core.task import create_task_manager, TaskStore
 from src.core.task.create_task_handler import CreateTaskActionHandler
 from src.core.task.subagent_luncher import AgentLauncher
@@ -73,29 +73,32 @@ def initialize_orchestrator_and_run_task():
         actions,
         llm_config,
     )
-    result =orchestrator_agent.run_task(AgentTask(
+    result = orchestrator_agent.run_task(AgentTask(
         task_id="",
         instruction=task_instruction,
         agent_name="orchestrator",
-    ), max_turns=1)
+    ), max_turns=5)
     pretty_log.info(f"task result: {result}")
 
     return "SUCCESS"
 
 
 def get_subagents(llm_config: LlmConfig) -> dict[str, Subagent]:
-    bash_actions = get_bash_handlers(get_docker_executor())
+    executor = get_docker_executor()
+    bash_actions = get_bash_handlers(executor)
+    files_actions = get_file_handlers(executor)
+    bash_actions[ReportAction] = ReportActionHandler().handle
     subagents = {
         "explorer": Subagent(
             agent_name="explorer",
             system_prompt=load_explorer_system_message(),
-            actions=bash_actions,
+            actions=bash_actions | files_actions,
             llm_config=llm_config,
         ),
         "coder": Subagent(
             agent_name="coder",
             system_prompt=load_coder_system_message(),
-            actions=bash_actions,
+            actions=files_actions | bash_actions,
             llm_config=llm_config,
         )
     }

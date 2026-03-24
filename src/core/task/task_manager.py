@@ -109,7 +109,7 @@ class TaskManager:
         )
 
         self.context_store.add_context(context_id, context)
-        pretty_log.info(f"Added context {context_id} to store")
+        pretty_log.info(f"Added context {context_id} to store", "ORCHESTRATOR")
         return True
 
 
