@@ -31,10 +31,6 @@ class ActionHandler:
                 env_responses.append(
                     f"[PARSE ERROR] {error} \n USE BLOCK SCALARS (|) TO FIX MULTILINE STRINGS ISSUES!"
                 )
-
-        action_names = [type(a).__name__ for a in actions]
-        pretty_log.info(f"Executing actions: {action_names}", self._agent_name)
-
         return actions, env_responses, has_error
 
     def handle_tools(self, tools: List[Action], env_responses: List[str]) -> ExecutionResult:

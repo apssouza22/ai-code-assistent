@@ -124,7 +124,7 @@ def run_glob(executor: CommandExecutor, pattern: str, path: Optional[str] = None
         return "No files found matching pattern", False
 
     if len(lines) == 100:
-        result = "\n".join(lines) + "\n\n[Output truncated to 100 files]"
+        result = "\n".join(lines) + "\n\n[Output truncated to 100 lines]"
     else:
         result = "\n".join(lines)
 
