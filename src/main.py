@@ -3,6 +3,8 @@
 import os
 import sys
 import traceback
+from pathlib import Path
+from typing import Optional
 
 from src.core.action import TaskCreateAction
 from src.core.action.actions import ReportAction
@@ -13,6 +15,7 @@ from src.core.bash.factory import get_bash_handlers
 from src.core.context import ContextStore
 from src.core.file import get_file_handlers
 from src.core.llm import LlmConfig
+from src.core.middleware import LoggingMiddleware, ErrorRecoveryMiddleware, ActionOutputTruncationMiddleware, TracingMiddleware
 from src.core.orchestrator.orchestrator_agent import OrchestratorAgent
 from src.core.task import create_task_manager, TaskStore
 from src.core.task.create_task_handler import CreateTaskActionHandler
@@ -22,6 +25,8 @@ from src.system_msgs.system_msg_loader import load_orchestrator_system_message, 
 
 # Add src to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+ACTION_OUTPUT_MAX_CHARS = 1_000
 
 task_instruction = (
     """Create and run a server on port 3000 that has a single GET endpoint: /fib.
@@ -34,13 +39,6 @@ If the query param is not an integer, it should return a 400 Bad Request error.
 Automatically choose to install any dependencies if it is required to develop the server
 """
 )
-
-subagent_instruction = (
-    """Explore the project root and list:
-  1. Any files or directories that indicate the programming language, server framework, or dependency management system (e.g., package.json, requirements.txt, pipfile, go.mod, etc.).
-  2. For each, add a 1-2 sentence explanation describing what the file is used for and what language or framework it suggests.
-  This should enable identification of the appropriate implementation approach for a simple HTTP server.
-""")
 
 
 def initialize_orchestrator_and_run_task():
@@ -55,7 +53,9 @@ def initialize_orchestrator_and_run_task():
         temperature=1,
         max_tokens=2000,
     )
-    subagents = get_subagents(llm_config)
+    this_dir_path: Path = Path(__file__).parent.resolve()
+    logging_dir = Path(this_dir_path) / "tracing_logs"
+    subagents = get_subagents(llm_config, logging_dir)
     context_store = ContextStore()
     task_store = TaskStore()
     task_manager = create_task_manager(task_store, context_store)
@@ -83,23 +83,31 @@ def initialize_orchestrator_and_run_task():
     return "SUCCESS"
 
 
-def get_subagents(llm_config: LlmConfig) -> dict[str, Subagent]:
+def get_subagents(llm_config: LlmConfig, logging_dir: Optional[Path] = None) -> dict[str, Subagent]:
     executor = get_docker_executor()
     bash_actions = get_bash_handlers(executor)
     files_actions = get_file_handlers(executor)
     bash_actions[ReportAction] = ReportActionHandler().handle
+    subagent_middlewares = [
+        LoggingMiddleware(),
+        ErrorRecoveryMiddleware(),
+        ActionOutputTruncationMiddleware(max_chars=ACTION_OUTPUT_MAX_CHARS),
+        TracingMiddleware(logging_dir),
+    ]
     subagents = {
         "explorer": Subagent(
             agent_name="explorer",
             system_prompt=load_explorer_system_message(),
-            actions=bash_actions | files_actions,
+            actions=files_actions | bash_actions,
             llm_config=llm_config,
+            middlewares=subagent_middlewares,
         ),
         "coder": Subagent(
             agent_name="coder",
             system_prompt=load_coder_system_message(),
             actions=files_actions | bash_actions,
             llm_config=llm_config,
+            middlewares=subagent_middlewares
         )
     }
     return subagents

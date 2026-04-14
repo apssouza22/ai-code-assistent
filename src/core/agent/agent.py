@@ -6,7 +6,9 @@ from src.core.action import Action, FinishAction
 from src.core.action.action_handler import ActionHandler
 from src.core.action.actions import BashAction
 from src.core.action.actions_result import ExecutionResult
+from src.core.llm import get_llm_response
 from src.core.llm.llm_config import LlmConfig
+from src.core.middleware import MiddlewarePipeline, Middleware, TurnContext
 from src.misc import pretty_log
 
 
@@ -18,27 +20,17 @@ class AgentTask:
     agent_name: str
 
 
-@dataclass
-class TurnContext:
-    agent_name: str
-    turn_num: int
-    max_turns: int
-    prompt: str
-    messages: List[Dict[str, str]]
-    aborted: bool = False
-    result: Optional[ExecutionResult] = None
-    abort_reason: Optional[str] = None,
-    metadata: Dict[str, Any] = Dict[str, Any]
-
 class Agent:
     """Base Agent class."""
 
-    def __init__(self,
+    def __init__(
+        self,
         system_prompt: str,
         actions: Dict[type, Callable],
         agent_name: str,
         llm_config: LlmConfig,
         max_turns: int = 30,
+        middlewares: List[Middleware] = None,
     ):
         self.agent_name = agent_name
         self.max_turns = max_turns
@@ -50,11 +42,23 @@ class Agent:
         )
         self.messages: List[Dict[str, str]] = []
         self.system_message = system_prompt
+        self.pipeline = MiddlewarePipeline(middlewares)
 
     @abstractmethod
     def run_task(self, task: AgentTask, max_turns: Optional[int] = None) -> Dict[str, Any]:
         pass
 
+    def handle_turn(self, ctx: TurnContext) -> TurnContext:
+        return self.pipeline.execute_turn(ctx, self._turn)
+
+    def _turn(self, ctx: TurnContext) -> TurnContext:
+        model_call_ctx = self.pipeline.execute_model_call(ctx.messages, self._get_llm_inference, self.agent_name)
+        ctx.llm_response = model_call_ctx.response
+        ctx.result = self.handle_llm_response(ctx.llm_response)
+        return ctx
+
+    def _get_llm_inference(self, messages: List[Dict[str, str]]) -> str:
+        return get_llm_response(messages, self.llm_config)
 
     def handle_llm_response(self, llm_response: str) -> ExecutionResult:
         """Execute actions based on LLM response."""
@@ -80,10 +84,12 @@ class Agent:
             try:
                 if isinstance(tool, BashAction):
                     pretty_log.debug(f"Executing bash command: {tool.cmd}", self.agent_name.upper())
-                output, action_error = self.tool_handler.execute_tool_call(tool)
+
+                output, action_error = self.pipeline.execute_action(tool, self.tool_handler.execute_tool_call, self.agent_name)
                 actions_executed.append(tool)
                 exec_outputs.append(output)
                 has_error = has_error or action_error
+
                 if isinstance(tool, FinishAction):
                     finish_message = tool.message
                     done = True

@@ -6,8 +6,8 @@ from typing import List, Dict, Optional, Callable
 from src.core.action import ReportAction
 from src.core.agent.agent import AgentTask, Agent, TurnContext
 from src.core.agent.subagent_report import SubagentReport, ContextItem
-from src.core.llm import get_llm_response
 from src.core.llm.llm_config import LlmConfig
+from src.core.middleware import Middleware
 from src.misc import pretty_log
 
 
@@ -31,6 +31,7 @@ class Subagent(Agent):
         actions: Dict[type, Callable],
         llm_config: LlmConfig,
         max_turns: int = 30,
+        middlewares: List[Middleware] = None,
     ):
         super().__init__(
             system_prompt=system_prompt,
@@ -38,6 +39,7 @@ class Subagent(Agent):
             max_turns=max_turns,
             llm_config=llm_config,
             agent_name=agent_name,
+            middlewares=middlewares
         )
 
     @staticmethod
@@ -85,8 +87,7 @@ class Subagent(Agent):
             prompt=task.instruction,
         )
 
-        ctx.llm_response = get_llm_response(self.messages, self.llm_config)
-        ctx.result = self.handle_llm_response(ctx.llm_response)
+        ctx = self.handle_turn(ctx)
         outputs = "\n".join(ctx.result.actions_outputs)
         ctx.metadata["_report"] = self._check_for_report(ctx.result.actions_executed)
 
