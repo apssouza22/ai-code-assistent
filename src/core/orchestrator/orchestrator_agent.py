@@ -3,9 +3,9 @@
 from typing import Any, Dict, Optional, Callable
 
 from src.core.agent import Agent, AgentTask
-from src.core.agent.agent import TurnContext
 from src.core.context import ContextStore
-from src.core.llm import LlmConfig, get_llm_response
+from src.core.llm import LlmConfig
+from src.core.middleware import TurnContext
 from src.core.orchestrator.session_history import SessionHistory
 from src.core.orchestrator.turn import Turn
 from src.core.orchestrator.turn_history import TurnHistory
@@ -50,12 +50,16 @@ class OrchestratorAgent(Agent):
             messages=self.messages,
             prompt=instruction,
         )
-        pretty_log.info(f"Running turn {ctx.turn_num} of {ctx.max_turns}", "ORCHESTRATOR")
         agent_prompt = f"## Current Task\n{ctx.prompt}\n\n{self.session_history.to_prompt()}"
-        llm_response = self._get_llm_response(agent_prompt)
-        result = self.handle_llm_response(llm_response)
+
+        self.messages.append({"role": "system", "content": self.system_message})
+        self.messages.append({"role": "user", "content": agent_prompt})
+
+        ctx = self.handle_turn(ctx)
+        result = ctx.result
+
         turn = Turn(
-            llm_output=llm_response,
+            llm_output=ctx.llm_response,
             actions_executed=result.actions_executed,
             action_outputs=result.actions_outputs,
             task_trajectories=result.task_trajectories
@@ -65,17 +69,6 @@ class OrchestratorAgent(Agent):
         self.session_history.finish_message = result.finish_message
         ctx.result = result
         return ctx
-
-
-    def _get_llm_response(self, agent_prompt: str) -> str:
-        call_messages = [
-            {"role": "system", "content": self.system_message},
-            {"role": "user", "content": agent_prompt},
-        ]
-        response = get_llm_response(messages=call_messages, llm_config=self.llm_config)
-        self.messages.append({"role": "user", "content": agent_prompt})
-        self.messages.append({"role": "assistant", "content": response})
-        return response
 
     def run_task(self, task: AgentTask, max_turns: Optional[int] = None) -> Dict[str, Any]:
         turns_executed = 0
