@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from src.core.action import ReportAction
+from src.core.agent.agent_report import AgentReport
 from src.core.agent.subagent_report import ContextItem, SubagentReport
 from src.core.middleware.base import Middleware, TurnContext
 from src.misc import pretty_log
@@ -18,10 +19,13 @@ class SubagentReportMiddleware(Middleware):
         for action in ctx.result.actions_executed:
             if isinstance(action, ReportAction):
                 pretty_log.info(f"Subagent report comments: {action.comments}", ctx.agent_name.upper())
-                contexts = [ContextItem(id=ctx["id"], content=ctx["content"]) for ctx in action.contexts]
-                ctx.report =  SubagentReport(
-                    contexts=contexts,
-                    comments=action.comments,
+                contexts = [ContextItem(id=ctxs["id"], content=ctxs["content"]) for ctxs in action.contexts]
+                ctx.report = AgentReport(
+                    "Subagent task completed.",
+                    metadata={"subagent_report": SubagentReport(
+                        contexts=contexts,
+                        comments=action.comments,
+                    )}
                 )
 
         return ctx

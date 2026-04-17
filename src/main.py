@@ -24,7 +24,10 @@ from src.core.middleware import (
     SubagentTaskBootstrapMiddleware,
     SubagentTurnCompletionMiddleware,
 )
-from src.core.orchestrator.orchestrator_agent import OrchestratorAgent
+from src.core.orchestrator.orchestrator_session_history_middleware import OrchestratorSessionHistoryMiddleware
+from src.core.orchestrator.orchestrator_session_prompt_middleware import OrchestratorSessionPromptMiddleware
+from src.core.orchestrator.session_history import SessionHistory
+from src.core.orchestrator.turn_history import TurnHistory
 from src.core.task import create_task_manager, TaskStore
 from src.core.task.create_task_handler import CreateTaskActionHandler
 from src.core.task.subagent_luncher import AgentLauncher
@@ -70,17 +73,24 @@ def initialize_orchestrator_and_run_task():
     task_manager = create_task_manager(task_store, context_store)
     agent_launcher = AgentLauncher(task_manager, context_store, subagents)
     create_task_handler = CreateTaskActionHandler(task_manager, agent_launcher)
+    session_history = SessionHistory(
+        task_store=task_store,
+        context_store=context_store,
+        turn_history=TurnHistory()
+    )
 
     actions = {
         TaskCreateAction: create_task_handler.handle,
     }
-    orchestrator_agent = OrchestratorAgent(
-        load_orchestrator_system_message(),
-        task_store,
-        context_store,
-        task_manager,
-        actions,
-        llm_config,
+    orchestrator_agent = Agent(
+        agent_name="orchestrator",
+        system_prompt=load_orchestrator_system_message(),
+        actions=actions,
+        llm_config=llm_config,
+        middlewares=[
+            OrchestratorSessionPromptMiddleware(session_history, load_orchestrator_system_message()),
+            OrchestratorSessionHistoryMiddleware(session_history)
+        ]
     )
     result = orchestrator_agent.run_task(AgentTask(
         task_id="",

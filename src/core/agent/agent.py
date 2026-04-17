@@ -5,6 +5,7 @@ from src.core.action import Action, FinishAction
 from src.core.action.action_handler import ActionHandler
 from src.core.action.actions import BashAction
 from src.core.action.actions_result import ExecutionResult
+from src.core.agent.agent_report import AgentReport
 from src.core.agent.subagent_report import SubagentReport
 from src.core.llm import get_llm_response
 from src.core.llm.llm_config import LlmConfig
@@ -46,7 +47,7 @@ class Agent:
         self.pipeline = MiddlewarePipeline(middlewares)
 
 
-    def run_task(self, task: AgentTask, max_turns: Optional[int] = None) -> AgentTaskReport:
+    def run_task(self, task: AgentTask, max_turns: Optional[int] = None) -> AgentReport:
         """Execute the task and return the report."""
         self.max_turns = max_turns or self.max_turns
         ctx = AgentTaskContext(
@@ -58,7 +59,7 @@ class Agent:
         ctx = self.pipeline.execute_agent_task(ctx, self._handle_task)
 
         if ctx.aborted:
-            return SubagentReport([], ctx.abort_reason or "Task aborted.")
+            return AgentReport(ctx.abort_reason or "Task aborted.")
 
         if ctx.task_exception:
             raise ctx.task_exception
@@ -71,12 +72,12 @@ class Agent:
             turn_num=0,
             max_turns=self.max_turns,
             messages=self.messages,
-            metadata={"task_title": agent_ctx.task.title},
+            task=agent_ctx.task,
             prompt=agent_ctx.task.instruction,
         )
 
         for turn_num in range(self.max_turns):
-            turn_ctx.turn_num = turn_num
+            turn_ctx.turn_num = turn_num + 1
             turn_ctx =  self.pipeline.execute_turn(turn_ctx, self._turn)
             if turn_ctx.turn_exception:
                 raise turn_ctx.turn_exception
@@ -87,11 +88,10 @@ class Agent:
                 return agent_ctx
 
             if turn_ctx.report:
-                pretty_log.info(f"Subagent report comments: {turn_ctx.report.comments}", self.agent_name.upper())
                 agent_ctx.task_result = turn_ctx.report
                 return agent_ctx
 
-        agent_ctx.task_result = SubagentReport([], "Reached max turns. Task not completed.")
+        agent_ctx.task_result = AgentReport("Reached max turns. Task not completed.")
         return agent_ctx
 
     def handle_turn(self, ctx: TurnContext) -> TurnContext:

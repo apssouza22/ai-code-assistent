@@ -34,7 +34,7 @@ class AgentLauncher:
         agent_task = self._get_agent_task(task)
         subagent_result = agent.run_task(agent_task)
 
-        result = self.task_manager.process_task_result(task, subagent_result)
+        result = self.task_manager.process_task_result(task, subagent_result.metadata.get("subagent_report"))
         response_lines = [
             f"Subagent completed task {task_id}",
             f"Contexts stored: {', '.join(result['context_ids_stored'])}",

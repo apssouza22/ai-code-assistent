@@ -18,6 +18,7 @@ from typing import List, Dict, Any, Optional, Tuple, Callable
 
 from src.core.action.actions import Action
 from src.core.action.actions_result import ExecutionResult
+from src.core.agent.agent_report import AgentReport
 from src.core.agent.subagent_report import SubagentReport
 
 ActionCall = Callable[[Action], Tuple[str, bool]]
@@ -34,7 +35,7 @@ class AgentTaskContext:
     metadata: Dict[str, Any] = field(default_factory=dict)
     aborted: bool = False
     abort_reason: Optional[str] = None
-    task_result: Any = None
+    task_result: AgentReport = None
     task_exception: Optional[BaseException] = None
 
 
@@ -46,13 +47,14 @@ class TurnContext:
     max_turns: int
     prompt: str
     messages: List[Dict[str, str]]
+    task: Any
+    report: Optional[AgentReport] = None
     llm_response: Optional[str] = None
     result: Optional[ExecutionResult] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
     aborted: bool = False
     abort_reason: Optional[str] = None
     turn_log_prefix: Optional[str] = None
-    report: Optional[SubagentReport] = None
     turn_exception: Optional[BaseException] = None
 
 

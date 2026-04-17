@@ -1,3 +1,5 @@
+import traceback
+
 from src.core.action import TaskCreateAction, ActionHandlerInterface
 from src.core.common.utils import format_tool_output
 from src.core.task.subagent_luncher import AgentLauncher
@@ -22,5 +24,6 @@ class CreateTaskActionHandler(ActionHandlerInterface):
             return format_tool_output("task", response), False
         except Exception as exc:
             error_msg = f"[ERROR] Failed to create task: {str(exc)}"
+            pretty_log.error(f"Failed to create task: {traceback.format_exc()}", "ORCHESTRATOR")
             pretty_log.error(error_msg, "ORCHESTRATOR")
             return format_tool_output("task", error_msg), True
