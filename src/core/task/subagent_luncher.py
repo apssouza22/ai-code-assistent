@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
 
-from src.core.agent import SubagentTask, Subagent
+from src.core.agent import SubagentTask, Agent
 from src.core.common.utils import format_tool_output
 from src.core.context import ContextStore
 from src.core.task import Task, TaskManager
@@ -12,7 +12,7 @@ class AgentLauncher:
         self,
         task_manager: TaskManager,
         context_store: ContextStore,
-        agents: dict[str, Subagent]
+        agents: dict[str, Agent]
     ):
         self.agents = agents
         self.context_store = context_store
@@ -25,7 +25,7 @@ class AgentLauncher:
             pretty_log.error(error_msg, "ORCHESTRATOR")
             return format_tool_output("subagent", error_msg), True
 
-        agent: Subagent = self.agents.get(task.agent_name)
+        agent: Agent | None = self.agents.get(task.agent_name)
         if not agent:
             error_msg = f"[ERROR] Agent {task.agent_name} not found"
             pretty_log.error(error_msg, "ORCHESTRATOR")

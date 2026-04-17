@@ -9,7 +9,7 @@ from typing import Optional
 from src.core.action import TaskCreateAction
 from src.core.action.actions import ReportAction
 from src.core.action.handlers import ReportActionHandler
-from src.core.agent.subagent import Subagent
+from src.core.agent.agent import Agent
 from src.core.agent.subagent_task import AgentTask
 from src.core.backend.command_env_executor import get_docker_executor
 from src.core.bash.factory import get_bash_handlers
@@ -92,7 +92,7 @@ def initialize_orchestrator_and_run_task():
     return "SUCCESS"
 
 
-def get_subagents(llm_config: LlmConfig, logging_dir: Optional[Path] = None) -> dict[str, Subagent]:
+def get_subagents(llm_config: LlmConfig, logging_dir: Optional[Path] = None) -> dict[str, Agent]:
     executor = get_docker_executor()
     bash_actions = get_bash_handlers(executor)
     files_actions = get_file_handlers(executor)
@@ -107,20 +107,20 @@ def get_subagents(llm_config: LlmConfig, logging_dir: Optional[Path] = None) -> 
         SubagentTurnCompletionMiddleware(),
     ]
     subagents = {
-        "explorer": Subagent(
-            agent_name="explorer",
+        "explorer": Agent(
             system_prompt=load_explorer_system_message(),
             actions=files_actions | bash_actions,
+            agent_name="explorer",
             llm_config=llm_config,
             middlewares=subagent_middlewares,
         ),
-        "coder": Subagent(
-            agent_name="coder",
+        "coder": Agent(
             system_prompt=load_coder_system_message(),
             actions=files_actions | bash_actions,
+            agent_name="coder",
             llm_config=llm_config,
-            middlewares=subagent_middlewares
-        )
+            middlewares=subagent_middlewares,
+        ),
     }
     return subagents
 
