@@ -4,13 +4,21 @@ from typing import Any, Dict, List, Optional, Tuple, Callable
 
 from src.core.action.actions import Action
 from src.core.middleware.base import (
-    Middleware, TurnContext, ModelCallContext, ActionCallContext, ActionCall, ModelCall,
+    Middleware,
+    AgentTaskContext,
+    TurnContext,
+    ModelCallContext,
+    ActionCallContext,
+    ActionCall,
+    ModelCall,
 )
 
 TurnCall = Callable[[TurnContext], TurnContext]
+AgentTaskFn = Callable[[AgentTaskContext], AgentTaskContext]
+
 
 class MiddlewarePipeline:
-    """Drives the six lifecycle events across a list of middlewares.
+    """Drives lifecycle events across a list of middlewares.
 
     * ``before_*`` and ``after_*`` hooks run in list order.
     * Only middlewares whose ``before_*`` was called (and did not short-circuit)
@@ -19,6 +27,28 @@ class MiddlewarePipeline:
 
     def __init__(self, middlewares: Optional[List[Middleware]] = None):
         self._middlewares = list(middlewares or [])
+
+    # -- Agent-task lifecycle ---------------------------------------------
+
+    def execute_agent_task(self, ctx: AgentTaskContext, task_fn: AgentTaskFn) -> AgentTaskContext:
+        called: List[Middleware] = []
+        for mw in self._middlewares:
+            ctx = mw.before_agent_task(ctx)
+            if ctx.aborted:
+                for after_mw in called:
+                    ctx = after_mw.after_agent_task(ctx)
+                return ctx
+            called.append(mw)
+
+        try:
+            ctx = task_fn(ctx)
+        except Exception as exc:
+            ctx.task_exception = exc
+
+        for mw in called:
+            ctx = mw.after_agent_task(ctx)
+
+        return ctx
 
     # -- Turn lifecycle -----------------------------------------------------
 
@@ -33,9 +63,9 @@ class MiddlewarePipeline:
             called.append(mw)
 
         try:
-            ctx = turn_fn(ctx)
+            ctx:TurnContext = turn_fn(ctx)
         except Exception as exc:
-            ctx.metadata["turn_exception"] = exc
+            ctx.turn_exception = exc
 
         for mw in called:
             ctx = mw.after_turn(ctx)

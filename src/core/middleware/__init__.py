@@ -2,6 +2,7 @@
 
 from src.core.middleware.base import (
     Middleware,
+    AgentTaskContext,
     TurnContext,
     ModelCallContext,
     ActionCallContext,
@@ -13,9 +14,12 @@ from src.ext.output_truncation import ActionOutputTruncationMiddleware
 from src.ext.audit_logging import LoggingMiddleware
 from src.ext.error_recovery import ErrorRecoveryMiddleware
 from src.ext.tracing import TracingMiddleware
+from src.ext.subagent_turn_completion import SubagentTurnCompletionMiddleware
+from src.ext.subagent_task_bootstrap import SubagentTaskBootstrapMiddleware
 
 __all__ = [
     "Middleware",
+    "AgentTaskContext",
     "TurnContext",
     "ModelCallContext",
     "ActionCallContext",
@@ -26,4 +30,6 @@ __all__ = [
     "LoggingMiddleware",
     "ErrorRecoveryMiddleware",
     "TracingMiddleware",
+    "SubagentTurnCompletionMiddleware",
+    "SubagentTaskBootstrapMiddleware",
 ]

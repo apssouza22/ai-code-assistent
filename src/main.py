@@ -9,17 +9,26 @@ from typing import Optional
 from src.core.action import TaskCreateAction
 from src.core.action.actions import ReportAction
 from src.core.action.handlers import ReportActionHandler
-from src.core.agent import Subagent, AgentTask
+from src.core.agent.subagent import Subagent
+from src.core.agent.subagent_task import AgentTask
 from src.core.backend.command_env_executor import get_docker_executor
 from src.core.bash.factory import get_bash_handlers
 from src.core.context import ContextStore
 from src.core.file import get_file_handlers
 from src.core.llm import LlmConfig
-from src.core.middleware import LoggingMiddleware, ErrorRecoveryMiddleware, ActionOutputTruncationMiddleware, TracingMiddleware
+from src.core.middleware import (
+    LoggingMiddleware,
+    ErrorRecoveryMiddleware,
+    ActionOutputTruncationMiddleware,
+    TracingMiddleware,
+    SubagentTaskBootstrapMiddleware,
+    SubagentTurnCompletionMiddleware,
+)
 from src.core.orchestrator.orchestrator_agent import OrchestratorAgent
 from src.core.task import create_task_manager, TaskStore
 from src.core.task.create_task_handler import CreateTaskActionHandler
 from src.core.task.subagent_luncher import AgentLauncher
+from src.ext.subagent_report import SubagentReportMiddleware
 from src.misc import pretty_log, PrettyLogger
 from src.system_msgs.system_msg_loader import load_orchestrator_system_message, load_explorer_system_message, load_coder_system_message
 
@@ -89,10 +98,13 @@ def get_subagents(llm_config: LlmConfig, logging_dir: Optional[Path] = None) -> 
     files_actions = get_file_handlers(executor)
     bash_actions[ReportAction] = ReportActionHandler().handle
     subagent_middlewares = [
+        SubagentTaskBootstrapMiddleware(),
         LoggingMiddleware(),
         ErrorRecoveryMiddleware(),
         ActionOutputTruncationMiddleware(max_chars=ACTION_OUTPUT_MAX_CHARS),
         TracingMiddleware(logging_dir),
+        SubagentReportMiddleware(),
+        SubagentTurnCompletionMiddleware(),
     ]
     subagents = {
         "explorer": Subagent(
