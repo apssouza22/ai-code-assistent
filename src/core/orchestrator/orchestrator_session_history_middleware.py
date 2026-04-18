@@ -1,5 +1,4 @@
 """Orchestrator turn completion — records each turn into session history."""
-from src.core.agent import SubagentReport
 from src.core.agent.agent_report import AgentReport
 from src.core.middleware.base import Middleware, TurnContext
 from src.core.orchestrator.session_history import SessionHistory
@@ -35,8 +34,7 @@ class OrchestratorSessionHistoryMiddleware(Middleware):
                 'turns_executed': ctx.turn_num,
                 'max_turns_reached': ctx.turn_num >= ctx.max_turns
             }
-            ctx.report = AgentReport("Orchestrator task completed.", )
-            ctx.metadata['report'] = report
+            ctx.report = AgentReport("Orchestrator task completed.", metadata=report)
 
         if ctx.result is not None:
             pretty_log.debug(f"Action output: {ctx.result.actions_outputs}", "ORCHESTRATOR")

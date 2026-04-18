@@ -61,11 +61,13 @@ A useful agent middleware stack recognizes that there are **multiple scopes** in
 | Scope | Typical core work | Examples of cross-cutting work |
 |-------|-------------------|--------------------------------|
 | **Turn** | Build context, decide termination | session tags, budgets, global error recovery |
-| **Model call** | Invoke the LLM with messages | caching, prompt injection guards, token accounting |
+| **Model call** | Invoke the LLM with messages; then parse and run tools | caching, prompt guards, ``LlmResponseToolMiddleware`` in ``after_model_call`` |
 | **Action** | Run a tool and return text | command logging, output truncation, allowlists |
 
-In this project, those scopes map to three context objects and six hook pairs (`before_*` /
-`after_*`) on a single `Middleware` base type. The pipeline guarantees **paired cleanup**: whatever
+In this project, those scopes map to context dataclass types and four lifecycle surfaces (agent task,
+turn, model call, action) with paired ``before_*`` / ``after_*`` hooks on a single `Middleware` base
+type. The agent copies ``ModelCallContext.execution_result`` (set when tool middleware runs in
+``after_model_call``) onto ``TurnContext.result``. The pipeline guarantees **paired cleanup**: whatever
 completed `before_*` without short-circuiting receives the matching `after_*` in the **same** list
 order, similar to running multiple `try` / `finally` blocks in registration order.
 

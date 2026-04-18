@@ -3,15 +3,16 @@
 from src.core.action.actions_result import ExecutionResult
 from src.core.middleware.base import Middleware, TurnContext
 from src.misc import pretty_log
+import  traceback
 
 class ErrorRecoveryMiddleware(Middleware):
     """Converts unhandled turn exceptions into an error ExecutionResult (after_turn)."""
 
     def after_turn(self, ctx: TurnContext) -> TurnContext:
-        exc = ctx.metadata.pop("turn_exception", None)
+        exc = ctx.turn_exception
         if exc is not None:
             agent = ctx.agent_name.upper()
-            pretty_log.error(f"Error in turn {ctx.turn_num}: {exc}", agent)
+            pretty_log.error(f"Error in turn {ctx.turn_num}: Stacktrace :  {traceback.print_stack(exc)}", agent)
             pretty_log.error(
                 f"Turn {ctx.turn_num} error for {ctx.agent_name}", exc_info=exc
             )

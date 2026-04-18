@@ -16,6 +16,7 @@ from src.ext.error_recovery import ErrorRecoveryMiddleware
 from src.ext.tracing import TracingMiddleware
 from src.ext.subagent_turn_completion import SubagentTurnCompletionMiddleware
 from src.ext.subagent_task_bootstrap import SubagentTaskBootstrapMiddleware
+from src.core.action.action_handler_middleware import ActionHandlerMiddleware
 
 __all__ = [
     "Middleware",
@@ -32,4 +33,5 @@ __all__ = [
     "TracingMiddleware",
     "SubagentTurnCompletionMiddleware",
     "SubagentTaskBootstrapMiddleware",
+    "ActionHandlerMiddleware",
 ]

@@ -65,6 +65,7 @@ class ModelCallContext:
     agent_name: str = ""
     response: Optional[str] = None
     skipped: bool = False
+    execution_result: Optional[ExecutionResult] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 

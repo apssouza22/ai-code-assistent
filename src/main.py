@@ -57,6 +57,7 @@ def initialize_orchestrator_and_run_task():
     """Initialize the orchestrator agent and run the task."""
 
     pretty_log.section_header("Initializing Code Assistant")
+    pretty_log.info("User input: " + task_instruction)
 
     # ("anthropic/claude-sonnet-4-20250514", 0.1),
     # ("openrouter/qwen/qwen3-coder", 0.1),
