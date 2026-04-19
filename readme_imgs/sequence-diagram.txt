@@ -1,0 +1,24 @@
+flowchart LR
+    A[User Task] --> B[Orchestrator<br/>Analyzes]
+    B --> C{Task Type}
+
+    C -->|Needs Info| D[Launch Explorer]
+    C -->|Needs Code| E[Launch Coder]
+
+    D --> F[Explorer Reports<br/>+ Contexts]
+    E --> G[Coder Reports<br/>+ Contexts]
+
+    F --> H[Store in<br/>Context Store]
+    G --> H
+
+    H --> I{Task<br/>Complete?}
+
+    I -->|No| B
+    I -->|Yes| J[Return to User]
+
+    style A fill:#34495e,stroke:#2c3e50,stroke-width:2px,color:#fff
+    style B fill:#3498db,stroke:#2874a6,stroke-width:2px,color:#fff
+    style D fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff
+    style E fill:#e74c3c,stroke:#c0392b,stroke-width:2px,color:#fff
+    style H fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff
+    style J fill:#16a085,stroke:#138d75,stroke-width:2px,color:#fff

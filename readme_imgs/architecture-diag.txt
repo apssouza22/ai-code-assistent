@@ -1,0 +1,45 @@
+---
+config:
+  layout: dagre
+---
+flowchart RL
+ subgraph subGraph0["Knowledge & Task Management"]
+        CS["💾 Context Store<br>Persistent Knowledge"]
+        TS["📋 Task Store<br>Progress Tracking"]
+  end
+ subgraph subGraph1["Main Orchestration Layer"]
+        Orch["🎯 Orchestrator Agent<br>• No code access<br>• Strategic planning<br>• Task decomposition"]
+        subGraph0
+  end
+ subgraph subGraph2["Specialized Agents"]
+        Explorer["🔍 Explorer Agent<br>• Read-only access<br>• Investigation<br>• Verification"]
+        Coder["💻 Coder Agent<br>• Full write access<br>• Implementation<br>• Code changes"]
+  end
+ subgraph Environment["Environment"]
+        FS["📂 File System<br>Read/Write/Edit"]
+        Term["⌨️ Terminal<br>Commands &amp; Scripts"]
+        Search["🔎 Search Tools<br>Grep/Glob/LS"]
+  end
+    User["👤 User<br>Submits Tasks"] -- Task --> Orch
+    Orch -- Queries --> LLM["🤖 LLM API<br>Claude/Qwen/OpenRouter"]
+    Orch -- Creates Tasks --> TS
+    Orch -- Reads/Writes --> CS
+    Orch -. Delegates<br>Read Tasks .-> subGraph2
+    Orch -. Delegates<br>Write Tasks .-> subGraph2
+    subGraph2 -- Queries --> LLM
+    subGraph2 -- Reports + Contexts --> Orch
+    subGraph2 -- Updates --> CS
+    subGraph2 -- Read/Write --> FS
+    subGraph2 -- Execute --> Term
+    subGraph2 -- Search --> Search
+    Orch -- Final Result --> User
+    style CS fill:#f39c12,stroke:#d68910,stroke-width:3px,color:#fff
+    style TS fill:#f39c12,stroke:#d68910,stroke-width:3px,color:#fff
+    style Orch fill:#3498db,stroke:#2874a6,stroke-width:4px,color:#fff
+    style Explorer fill:#27ae60,stroke:#1e8449,stroke-width:3px,color:#fff
+    style Coder fill:#e74c3c,stroke:#c0392b,stroke-width:3px,color:#fff
+    style FS fill:#95a5a6,stroke:#7f8c8d,stroke-width:2px,color:#fff
+    style Term fill:#95a5a6,stroke:#7f8c8d,stroke-width:2px,color:#fff
+    style Search fill:#95a5a6,stroke:#7f8c8d,stroke-width:2px,color:#fff
+    style User fill:#34495e,stroke:#2c3e50,stroke-width:3px,color:#fff
+    style LLM fill:#9b59b6,stroke:#7d3c98,stroke-width:3px,color:#fff
